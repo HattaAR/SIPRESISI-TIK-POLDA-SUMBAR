@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Kelola Jenis Surat - SiPresisi TIK</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+
+    <div class="dashboard-container">
+        
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <img src="images/images-removebg-preview.png" alt="Logo">
+                <h4>TIK POLRI</h4>
+            </div>
+            <div class="sidebar-menu">
+                <a href="admin-dashboard.html"><i class="fas fa-home"></i> Dashboard</a>
+                <a href="admin-users.html"><i class="fas fa-users"></i> Kelola User</a>
+                <a href="admin-types.html" class="active"><i class="fas fa-envelope-open-text"></i> Kelola Jenis Surat</a>
+                <a href="admin-logs.html"><i class="fas fa-history"></i> Log Aktivitas</a>
+                <a href="admin-archive.html"><i class="fas fa-archive"></i> Arsip Surat</a>
+                <a href="#" onclick="logout()" class="logout-btn"><i class="fas fa-sign-out-alt"></i> Logout</a>
+            </div>
+        </nav>
+
+        <main class="main-content">
+            <div class="top-bar">
+                <h2>Kelola Jenis Surat</h2>
+                <div class="user-info">
+                    <div class="user-text">
+                        <h4 id="userNameDisplay">Admin</h4>
+                        <small>Administrator</small>
+                    </div>
+                    <div class="user-avatar" style="background:#002BE8;">A</div>
+                </div>
+            </div>
+
+            <div class="content-card">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                    <div>
+                        <h3>Daftar Jenis Surat & Template</h3>
+                        <p style="color:#666;">Atur template Word dan formulir isian untuk Staff.</p>
+                    </div>
+                    <button onclick="bukaModal()" class="btn-blue">
+                        <i class="fas fa-plus"></i> Tambah Jenis Baru
+                    </button>
+                </div>
+
+                <table class="table-custom">
+                    <thead>
+                        <tr>
+                            <th width="10%">Kode</th>
+                            <th width="30%">Nama Jenis Surat</th>
+                            <th width="20%">Status Template</th>
+                            <th width="20%">Status Form</th>
+                            <th width="20%">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="typeContainer">
+                        <tr><td colspan="5" style="text-align:center;">⏳ Memuat data...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <div id="modalAdd" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="tutupModal()">&times;</span>
+            <h3>Tambah Jenis Surat</h3>
+            <br>
+            <div class="form-group">
+                <label>Nama Jenis Surat</label>
+                <input type="text" id="typeName" placeholder="Contoh: Surat Perintah">
+            </div>
+            <div class="form-group">
+                <label>Kode Prefix</label>
+                <input type="text" id="typeCode" placeholder="Contoh: SPRIN">
+            </div>
+            <div class="form-group">
+                <label>Format Nomor Surat</label>
+                <input type="text" id="typeFormat" placeholder="Contoh: {kode}/{nomor}/{bulan}/{tahun}" value="{kode}/{nomor}/{bulan}/{tahun}">
+                <small style="color:#666; font-size:11px;">
+                Gunakan variabel: <b>{nomor}</b> (001), <b>{kode}</b> (SPRIN), <b>{bulan}</b> (II), <b>{tahun}</b> (2026)
+                </small>
+            </div>
+            <div class="form-group">
+                <label>Upload Template (.docx)</label>
+                <div style="border: 2px dashed #ddd; padding: 20px; text-align: center; border-radius: 8px; background: #f9f9f9;">
+                    <input type="file" id="templateFile" accept=".docx">
+                    <p style="font-size:12px; color:#999; margin-top:5px;">Pastikan menggunakan Tabel Transparan agar rapi.</p>
+                </div>
+            </div>
+            <button onclick="tambahType()" id="btnSubmit" style="width:100%; padding:12px; background:#2196f3; color:white; border:none; border-radius:8px; cursor:pointer;">Simpan Data</button>
+        </div>
+    </div>
+
+    <div id="modalSchema" class="modal">
+        <div class="modal-content" style="width: 95%; max-width: 900px; padding: 40px;">
+            <span class="close-btn" onclick="tutupModalSchema()" style="font-size: 28px;">&times;</span>
+            
+            <div style="border-bottom: 1px solid #eee; padding-bottom: 15px; margin-bottom: 20px;">
+                <h2 style="margin:0; color:#181c32;">Atur Formulir: <span id="schemaTitle" style="color:#3699ff;">...</span></h2>
+                <p style="color:#b5b5c3; font-size:14px; margin-top:5px;">
+                    Tentukan kolom isian yang akan muncul di layar Staff saat membuat surat ini.
+                </p>
+            </div>
+
+            <div style="display:grid; grid-template-columns: 2fr 1fr 2fr 50px; gap: 15px; padding: 0 10px; margin-bottom: 5px;">
+                <small style="font-weight:bold; color:#666;">LABEL (Judul Input)</small>
+                <small style="font-weight:bold; color:#666;">TIPE INPUT</small>
+                <small style="font-weight:bold; color:#666;">KEY (Variabel Word)</small>
+                <small></small>
+            </div>
+            
+            <div id="schemaContainer" style="max-height:50vh; overflow-y:auto; border:1px solid #e4e6ef; border-radius:8px; padding:15px; background:#f9f9f9;">
+                </div>
+
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:20px;">
+                <button onclick="tambahBarisSchema()" class="btn-dashed">
+                    <i class="fas fa-plus-circle"></i> Tambah Baris Input
+                </button>
+
+                <div style="display:flex; gap:10px;">
+                    <button onclick="tutupModalSchema()" style="padding:12px 25px; background:#f3f6f9; color:#7e8299; border:none; border-radius:6px; cursor:pointer; font-weight:600;">Batal</button>
+                    <input type="hidden" id="idTypeTarget">
+                    <button onclick="simpanSchema()" class="btn-blue" style="padding:12px 30px; font-size:14px;">
+                        <i class="fas fa-save"></i> SIMPAN PERUBAHAN
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const token = localStorage.getItem('token');
+        if(!token) window.location.href = 'login.html';
+
+        let allData = [];     
+        let currentSchema = []; 
+
+        // 1. LOAD DATA (UPDATE: RENDER KE TABEL)
+        async function loadTypes() {
+            try {
+                const res = await fetch('/api/types', { headers: { 'Authorization': 'Bearer ' + token } });
+                const json = await res.json();
+                allData = json.data;
+
+                const container = document.getElementById('typeContainer');
+                container.innerHTML = '';
+
+                if(json.data.length === 0) {
+                    container.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px;">Belum ada jenis surat.</td></tr>';
+                    return;
+                }
+
+                json.data.forEach(item => {
+                    // Cek Status Template
+                    const statusTemplate = item.template_path 
+                        ? `<span class="badge badge-approved"><i class="fas fa-check"></i> Ada Template</span>` 
+                        : `<span class="badge badge-rejected"><i class="fas fa-times"></i> Kosong</span>`;
+
+                    // Cek Status Form Schema
+                    let schemaParsed = [];
+                    try { schemaParsed = JSON.parse(item.form_schema); } catch(e){}
+                    
+                    const statusForm = (schemaParsed && schemaParsed.length > 0)
+                        ? `<span style="color:#1bc5bd; font-size:12px;"><i class="fas fa-check-circle"></i> Siap (${schemaParsed.length} Input)</span>`
+                        : `<span style="color:#ffa800; font-size:12px;"><i class="fas fa-exclamation-triangle"></i> Belum Diatur</span>`;
+
+                    // Render Baris Tabel
+                    const row = `
+                        <tr>
+                            <td><span class="badge badge-pending">${item.code_prefix}</span></td>
+                            <td><strong>${item.name}</strong></td>
+                            <td>${statusTemplate}</td>
+                            <td>${statusForm}</td>
+                            <td>
+                                <button onclick="bukaModalSchema(${item.id})" class="btn-sm btn-blue" title="Atur Form">
+                                    <i class="fas fa-list-alt"></i> Atur
+                                </button>
+                                <button onclick="hapusType(${item.id})" class="btn-sm btn-danger" title="Hapus">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                    container.innerHTML += row;
+                });
+            } catch (err) { console.error(err); }
+        }
+
+        // 2. TAMBAH JENIS SURAT (LOGIKA TETAP)
+        async function tambahType() {
+            const name = document.getElementById('typeName').value;
+            const code = document.getElementById('typeCode').value;
+            const format = document.getElementById('typeFormat').value;
+            const fileInput = document.getElementById('templateFile');
+
+            if(!name || !code) return alert("Nama dan Kode Wajib diisi!");
+
+            const btn = document.getElementById('btnSubmit');
+            btn.innerText = "⏳ Uploading...";
+            btn.disabled = true;
+
+            try {
+                const formData = new FormData();
+                formData.append('name', name);
+                formData.append('code_prefix', code);
+                formData.append('number_format', format);
+                if (fileInput.files.length > 0) formData.append('template', fileInput.files[0]);
+
+                const res = await fetch('/api/types', {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + token }, 
+                    body: formData
+                });
+
+                if(res.ok) {
+                    alert("Berhasil disimpan!");
+                    tutupModal();
+                    loadTypes();
+                } else { 
+                    alert("Gagal Simpan"); 
+                }
+            } catch(e) { alert("Error: " + e.message); } 
+            finally { btn.innerText = "Simpan Data"; btn.disabled = false; }
+        }
+
+        async function hapusType(id) {
+            if(confirm("Yakin hapus? Template fisik juga akan terhapus.")) {
+                await fetch(`/api/types/${id}`, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token } });
+                loadTypes();
+            }
+        }
+
+        // ============================================================
+        // LOGIKA EDITOR SCHEMA (TETAP SAMA SEPERTI KODE LAMA ANDA)
+        // ============================================================
+        
+        function bukaModalSchema(id) {
+            const type = allData.find(t => t.id == id);
+            if(!type) return;
+
+            document.getElementById('idTypeTarget').value = id;
+            document.getElementById('schemaTitle').innerText = type.name;
+            
+            try {
+                currentSchema = JSON.parse(type.form_schema);
+                if(!Array.isArray(currentSchema)) currentSchema = [];
+            } catch(e) {
+                currentSchema = [];
+            }
+
+            renderSchemaList();
+            document.getElementById('modalSchema').style.display = 'flex';
+        }
+
+        function tutupModalSchema() { document.getElementById('modalSchema').style.display = 'none'; }
+
+        function renderSchemaList() {
+            const container = document.getElementById('schemaContainer');
+            container.innerHTML = '';
+
+            if(currentSchema.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align:center; padding:40px; color:#a1a5b7;">
+                        <i class="fas fa-clipboard-list" style="font-size:32px; margin-bottom:10px; opacity:0.5;"></i><br>
+                        Belum ada konfigurasi formulir.<br>Klik tombol <b>Tambah Baris Input</b> di bawah.
+                    </div>`;
+                return;
+            }
+
+            currentSchema.forEach((item, index) => {
+                // Style Khusus untuk baris
+                const rowStyle = `
+                    display: grid; 
+                    grid-template-columns: 2fr 1fr 2fr 50px; 
+                    gap: 15px; 
+                    align-items: center; 
+                    background: white; 
+                    padding: 15px; 
+                    border: 1px solid #e4e6ef; 
+                    border-radius: 8px; 
+                    margin-bottom: 10px;
+                    box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+                    transition: 0.2s;
+                `;
+
+                const row = `
+                    <div style="${rowStyle}" onmouseover="this.style.borderColor='#3699ff'" onmouseout="this.style.borderColor='#e4e6ef'">
+                        
+                        <div>
+                            <input type="text" value="${item.label}" oninput="updateSchema(${index}, 'label', this.value)" 
+                                placeholder="Contoh: Kepada Yth"
+                                style="width:100%; padding:10px; border:1px solid #ddd; border-radius:6px; font-weight:500;">
+                        </div>
+
+                        <div>
+                            <select onchange="updateSchema(${index}, 'type', this.value)" 
+                                style="width:100%; padding:10px; border:1px solid #ddd; border-radius:6px; background:#fff;">
+                                <option value="text" ${item.type === 'text' ? 'selected' : ''}>Text (Singkat)</option>
+                                <option value="textarea" ${item.type === 'textarea' ? 'selected' : ''}>Text Area (Paragraf)</option>
+                                <option value="date" ${item.type === 'date' ? 'selected' : ''}>Tanggal (Date)</option>
+                                <option value="time" ${item.type === 'time' ? 'selected' : ''}>Jam (Time)</option>
+                            </select>
+                        </div>
+
+                        <div style="position:relative;">
+                            <span style="position:absolute; left:10px; top:11px; color:#888; font-family:monospace;">{</span>
+                            <input type="text" value="${item.key}" oninput="updateSchema(${index}, 'key', this.value)" 
+                                placeholder="variable"
+                                style="width:100%; padding:10px 10px 10px 25px; border:1px solid #ffcdd2; background:#fff5f8; border-radius:6px; font-family:monospace; color:#d32f2f; font-weight:bold;">
+                            <span style="position:absolute; right:10px; top:11px; color:#888; font-family:monospace;">}</span>
+                        </div>
+
+                        <button onclick="hapusSchema(${index})" title="Hapus Baris" 
+                            style="width:40px; height:40px; background:#fff; border:1px solid #ffe2e5; color:#f64e60; border-radius:6px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:0.2s;">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </div>
+                `;
+                container.innerHTML += row;
+            });
+        }
+
+        function updateSchema(index, field, value) {
+            currentSchema[index][field] = value;
+        }
+
+        function tambahBarisSchema() {
+            currentSchema.push({ label: "Input Baru", type: "text", key: "variable_baru" });
+            renderSchemaList();
+        }
+
+        function hapusSchema(index) {
+            currentSchema.splice(index, 1);
+            renderSchemaList();
+        }
+
+        async function simpanSchema() {
+            const id = document.getElementById('idTypeTarget').value;
+            try {
+                const res = await fetch(`/api/types/${id}/schema`, {
+                    method: 'PUT',
+                    headers: { 
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json' 
+                    },
+                    body: JSON.stringify({ schema: JSON.stringify(currentSchema) })
+                });
+
+                if(res.ok) {
+                    alert("Formulir berhasil diperbarui!");
+                    tutupModalSchema();
+                    const type = allData.find(t => t.id == id);
+                    if(type) type.form_schema = JSON.stringify(currentSchema);
+                    loadTypes(); // Reload tabel untuk update status
+                } else {
+                    alert("Gagal simpan.");
+                }
+            } catch(e) { alert("Error: " + e.message); }
+        }
+
+        // Helper Functions
+        function bukaModal() { document.getElementById('modalAdd').style.display = 'flex'; }
+        function tutupModal() { document.getElementById('modalAdd').style.display = 'none'; }
+        function logout() { localStorage.clear(); window.location.href = 'login.html'; }
+
+        loadTypes();
+    </script>
+</body>
+</html>

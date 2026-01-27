@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Log Aktivitas - SiPresisi TIK</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .log-item {
+            display: flex;
+            align-items: center;
+            background: white;
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+            transition: 0.2s;
+        }
+        .log-item:hover { background: #f9f9f9; }
+        .log-icon {
+            width: 40px; height: 40px;
+            background: #e3f2fd; color: #1565c0;
+            border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            margin-right: 15px; font-size: 18px;
+        }
+        .log-content { flex: 1; }
+        .log-content h4 { margin: 0 0 5px; font-size: 15px; }
+        .log-content p { margin: 0; color: #666; font-size: 13px; }
+        .log-meta { text-align: right; font-size: 12px; color: #999; }
+        .badge-role { padding: 2px 6px; border-radius: 4px; font-size: 10px; background: #eee; margin-left: 5px; }
+    </style>
+</head>
+<body>
+
+    <div class="dashboard-container">
+        
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <img src="images/images-removebg-preview.png" alt="Logo">
+                <h4>TIK POLRI</h4>
+            </div>
+            <div class="sidebar-menu">
+                <a href="admin-dashboard.html"><i class="fas fa-home"></i> Dashboard</a>
+                <a href="admin-users.html"><i class="fas fa-users"></i> Kelola User</a>
+                <a href="admin-types.html"><i class="fas fa-envelope-open-text"></i> Kelola Jenis Surat</a>
+                <a href="admin-logs.html" class="active"><i class="fas fa-history"></i> Log Aktivitas</a>
+                <a href="admin-archive.html" ><i class="fas fa-archive"></i> Arsip Surat</a>
+                <a href="#" onclick="logout()" class="logout-btn"><i class="fas fa-sign-out-alt"></i> Logout</a>
+            </div>
+        </nav>
+
+        <main class="main-content">
+            <div class="top-bar">
+                <h2>Log Aktivitas</h2>
+                <div class="user-info">
+                    <div class="user-text">
+                        <h4 id="userNameDisplay">Admin</h4>
+                        <small>Administrator</small>
+                    </div>
+                    <div class="user-avatar" style="background:#002BE8;">A</div>
+                </div>
+            </div>
+
+            <div class="content-card">
+                <div style="margin-bottom: 20px; display: flex; gap: 10px;">
+                    <input type="text" id="searchInput" placeholder="Cari aktivitas..." style="padding: 10px; border: 1px solid #ddd; border-radius: 6px; width: 300px;">
+                    <button onclick="loadLogs()" class="btn-green" style="background:#2196f3;">
+                        <i class="fas fa-sync"></i> Refresh
+                    </button>
+                </div>
+
+                <div id="logContainer">
+                    <p style="padding: 20px;">⏳ Memuat Log...</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const token = localStorage.getItem('token');
+        if(!token) window.location.href = 'login.html';
+
+        async function loadLogs() {
+            try {
+                const res = await fetch('/api/logs', { headers: { 'Authorization': 'Bearer ' + token } });
+                const json = await res.json();
+                
+                const container = document.getElementById('logContainer');
+                container.innerHTML = '';
+
+                if (json.data.length === 0) {
+                    container.innerHTML = '<p style="padding:20px; text-align:center;">Belum ada aktivitas terekam.</p>';
+                    return;
+                }
+
+                json.data.forEach(log => {
+                    // Tentukan Icon berdasarkan Action
+                    let icon = 'fa-info-circle';
+                    let color = '#e3f2fd'; // Biru default
+                    
+                    if(log.action === 'LOGIN') { icon = 'fa-sign-in-alt'; color = '#e8f5e9'; } // Hijau
+                    if(log.action === 'APPROVE') { icon = 'fa-check-circle'; color = '#fff3e0'; } // Orange
+                    if(log.action === 'REJECT') { icon = 'fa-times-circle'; color = '#ffebee'; } // Merah
+
+                    const time = new Date(log.created_at).toLocaleString('id-ID');
+
+                    const html = `
+                        <div class="log-item">
+                            <div class="log-icon" style="background:${color}">
+                                <i class="fas ${icon}"></i>
+                            </div>
+                            <div class="log-content">
+                                <h4>${log.full_name || 'System'} <span class="badge-role">${log.role || 'System'}</span></h4>
+                                <p><strong>${log.action}</strong> - ${log.description}</p>
+                            </div>
+                            <div class="log-meta">
+                                <div><i class="far fa-clock"></i> ${time}</div>
+                                <div>IP: ${log.ip_address || '-'}</div>
+                            </div>
+                        </div>
+                    `;
+                    container.innerHTML += html;
+                });
+
+            } catch (err) { console.error(err); }
+        }
+
+        function logout() { localStorage.clear(); window.location.href = 'login.html'; }
+        
+        // Search Filter Sederhana
+        document.getElementById('searchInput').addEventListener('keyup', function() {
+            let filter = this.value.toLowerCase();
+            let items = document.querySelectorAll('.log-item');
+            items.forEach(item => {
+                let text = item.innerText.toLowerCase();
+                item.style.display = text.includes(filter) ? 'flex' : 'none';
+            });
+        });
+
+        loadLogs();
+    </script>
+</body>
+</html>

@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Arsip Surat - SiPresisi TIK</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+
+    <div class="dashboard-container">
+        
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <img src="images/images-removebg-preview.png" alt="Logo">
+                <h4>TIK POLRI</h4>
+            </div>
+            <div class="sidebar-menu">
+                <a href="admin-dashboard.html"><i class="fas fa-home"></i> Dashboard</a>
+                <a href="admin-users.html"><i class="fas fa-users"></i> Kelola User</a>
+                <a href="admin-types.html"><i class="fas fa-envelope-open-text"></i> Kelola Jenis Surat</a>
+                <a href="admin-logs.html"><i class="fas fa-history"></i> Log Aktivitas</a>
+                
+                <a href="admin-archive.html" class="active"><i class="fas fa-archive"></i> Arsip Surat</a>
+                
+                <a href="#" onclick="logout()" class="logout-btn"><i class="fas fa-sign-out-alt"></i> Logout</a>
+            </div>
+        </nav>
+
+        <main class="main-content">
+            <div class="top-bar">
+                <h2>Arsip Surat</h2>
+                <div class="user-info">
+                    <div class="user-text">
+                        <h4 id="userNameDisplay">Admin</h4>
+                        <small>Administrator</small>
+                    </div>
+                    <div class="user-avatar" style="background:#002BE8;">A</div>
+                </div>
+            </div>
+
+            <div class="content-card">
+                <h3>🗄️ Data Semua Surat (Final)</h3>
+                <p style="color:#666; margin-bottom:15px;">Daftar surat yang telah disetujui dan diterbitkan.</p>
+
+                <table border="1" style="width: 100%; border-collapse: collapse; border-color: #eee;">
+                    <thead>
+                        <tr style="background: #f8f9fa; text-align: left;">
+                            <th style="padding: 10px;">Nomor Surat</th>
+                            <th style="padding: 10px;">Subjek</th>
+                            <th style="padding: 10px;">Jenis</th>
+                            <th style="padding: 10px;">Pengirim</th>
+                            <th style="padding: 10px;">Tanggal</th>
+                            <th style="padding: 10px;">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableArchive">
+                        <tr><td colspan="6" style="padding:10px;">⏳ Memuat data arsip...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const token = localStorage.getItem('token');
+        if(!token) window.location.href = 'login.html';
+
+        async function loadArchive() {
+            try {
+                const res = await fetch('/api/letters/archive', { 
+                    headers: { 'Authorization': 'Bearer ' + token } 
+                });
+                const json = await res.json();
+                
+                const tbody = document.getElementById('tableArchive');
+                tbody.innerHTML = '';
+
+                if (!json.data || json.data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" style="padding:20px; text-align:center;">Belum ada arsip surat.</td></tr>';
+                    return;
+                }
+
+                json.data.forEach(item => {
+                    const tanggal = new Date(item.letter_date).toLocaleDateString('id-ID', {
+                        day: 'numeric', month: 'short', year: 'numeric'
+                    });
+
+                    const row = `
+                        <tr>
+                            <td style="padding: 10px; font-weight:bold;">${item.letter_number}</td>
+                            <td style="padding: 10px;">${item.subject}</td>
+                            <td style="padding: 10px;"><span style="background:#e3f2fd; color:#1565c0; padding:4px 8px; border-radius:4px; font-size:12px;">${item.jenis_surat}</span></td>
+                            <td style="padding: 10px;">${item.pengirim}</td>
+                            <td style="padding: 10px;">${tanggal}</td>
+                            <td style="padding: 10px;">
+                                <button onclick="window.open('/surat/${item.pdf_path}', '_blank')" class="btn-green" style="padding:5px 10px; font-size:12px; border-radius:4px; border:none; cursor:pointer;">
+                                    <i class="fas fa-download"></i> PDF
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                    tbody.innerHTML += row;
+                });
+            } catch (err) { console.error(err); }
+        }
+
+        function logout() { localStorage.clear(); window.location.href = 'login.html'; }
+
+        loadArchive();
+    </script>
+</body>
+</html>

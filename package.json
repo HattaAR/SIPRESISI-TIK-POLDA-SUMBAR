@@ -1,0 +1,29 @@
+{
+  "name": "kode_sumber_sisk",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "start": "node app.js",
+    "dev": "nodemon app.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.5",
+    "docxtemplater": "^3.67.6",
+    "dotenv": "^17.2.3",
+    "express": "^5.2.1",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.3",
+    "multer": "^2.0.2",
+    "mysql2": "^3.16.1",
+    "pizzip": "^3.2.0",
+    "puppeteer": "^24.35.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.11"
+  }
+}

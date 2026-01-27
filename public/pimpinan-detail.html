@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Detail Persetujuan - SiPresisi TIK</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .split-view { display: flex; gap: 20px; height: 80vh; }
+        .left-panel { flex: 1; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); overflow-y: auto; }
+        .right-panel { flex: 2; background: #525659; border-radius: 12px; overflow: hidden; } /* Warna background PDF viewer */
+        iframe { width: 100%; height: 100%; border: none; }
+        
+        .meta-group { margin-bottom: 15px; }
+        .meta-label { color: #666; font-size: 12px; margin-bottom: 4px; display: block; }
+        .meta-value { font-weight: bold; font-size: 15px; color: #333; }
+        
+        .action-area { margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; }
+        .btn-block { width: 100%; margin-bottom: 10px; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; border: none; display: flex; align-items: center; justify-content: center; gap: 10px;}
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <img src="images/images-removebg-preview.png" alt="Logo">
+                <h4>TIK POLRI</h4>
+            </div>
+            <div class="sidebar-menu">
+                <a href="pimpinan-dashboard.html"><i class="fas fa-arrow-left"></i> Kembali ke Dashboard</a>
+            </div>
+        </nav>
+
+        <main class="main-content">
+            <div class="top-bar">
+                <h2>Review Surat Masuk</h2>
+                <div class="user-info"><div class="user-avatar" style="background:#ffb300; color:#000;">P</div></div>
+            </div>
+
+            <div class="split-view">
+                <div class="left-panel">
+                    <h3>Informasi Surat</h3>
+                    <br>
+                    <div class="meta-group">
+                        <span class="meta-label">Jenis Surat</span>
+                        <div class="meta-value" id="dJenis">Loading...</div>
+                    </div>
+                    <div class="meta-group">
+                        <span class="meta-label">Pengirim</span>
+                        <div class="meta-value" id="dPengirim">Loading...</div>
+                    </div>
+                    <div class="meta-group">
+                        <span class="meta-label">Perihal</span>
+                        <div class="meta-value" id="dPerihal">Loading...</div>
+                    </div>
+                    <div class="meta-group">
+                        <span class="meta-label">Tanggal Diajukan</span>
+                        <div class="meta-value" id="dTanggal">Loading...</div>
+                    </div>
+
+                    <div class="action-area">
+                        <h4>Tindakan Pimpinan</h4>
+                        <p style="font-size:12px; color:#666; margin-bottom:15px;">
+                            Pastikan Anda telah membaca isi surat di sebelah kanan sebelum mengambil keputusan.
+                        </p>
+
+                        <button onclick="approveDetail()" class="btn-block" style="background: #2e7d32; color: white;">
+                            <i class="fas fa-check-circle"></i> SETUJUI SURAT
+                        </button>
+                        
+                        <button onclick="openModalReject()" class="btn-block" style="background: #c62828; color: white;">
+                            <i class="fas fa-times-circle"></i> TOLAK SURAT
+                        </button>
+                    </div>
+                </div>
+
+                <div class="right-panel">
+                    <iframe id="pdfPreview" src=""></iframe>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div id="modalReject" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeModalReject()">&times;</span>
+            <h3 style="color: #c62828;">Tolak Surat</h3>
+            <div class="form-group">
+                <label>Alasan Penolakan</label>
+                <textarea id="alasanTolak" style="min-height:100px;"></textarea>
+            </div>
+            <button onclick="rejectDetail()" style="width:100%; padding:10px; background:#c62828; color:white; border:none; border-radius:8px;">KIRIM PENOLAKAN</button>
+        </div>
+    </div>
+
+    <script>
+        const token = localStorage.getItem('token');
+        if(!token) window.location.href = 'login.html';
+
+        // 1. Ambil ID dari URL (misal: pimpinan-detail.html?id=5)
+        const urlParams = new URLSearchParams(window.location.search);
+        const letterId = urlParams.get('id');
+
+        if(!letterId) { alert("ID Surat tidak ditemukan"); window.location.href='pimpinan-dashboard.html'; }
+
+        // 2. Load Detail Surat
+        async function loadDetail() {
+            try {
+                // Kita gunakan endpoint 'pending' tapi difilter client-side (Solusi Cepat)
+                // Idealnya buat endpoint: GET /api/letters/:id
+                const res = await fetch('/api/letters/pending', { headers: { 'Authorization': 'Bearer ' + token } });
+                const json = await res.json();
+                
+                // Cari surat yang ID nya cocok
+                const surat = json.data.find(item => item.id == letterId);
+
+                if(!surat) { 
+                    alert("Surat tidak ditemukan atau sudah diproses."); 
+                    window.location.href='pimpinan-dashboard.html';
+                    return;
+                }
+
+                // Isi Data ke HTML
+                document.getElementById('dJenis').innerText = surat.jenis_surat;
+                document.getElementById('dPengirim').innerText = surat.pengirim;
+                document.getElementById('dPerihal').innerText = surat.subject;
+                document.getElementById('dTanggal').innerText = new Date(surat.created_at).toLocaleDateString('id-ID');
+
+                // TAMPILKAN PDF DUMMY (Karena di tahap Pending PDF belum di-generate final)
+                // TAPI: Untuk keperluan preview konten, kita bisa generate PDF sementara atau tampilkan teks.
+                // SEMENTARA: Kita tampilkan pesan atau generate PDF on-the-fly.
+                // Jika Anda ingin preview konten teks:
+                // document.getElementById('rightPanel').innerHTML = `<div style="padding:20px; background:white; height:100%;">${surat.content}</div>`;
+                
+                // JIKA MAU PDF PREVIEW: Backend harus support generate preview. 
+                // Untuk sekarang saya arahkan ke PDF placeholder jika pdf_path belum ada
+                document.getElementById('pdfPreview').srcdoc = `
+                    <body style="display:flex; justify-content:center; align-items:center; height:100%; font-family:sans-serif;">
+                        <div style="text-align:center;">
+                            <h2>Preview Konten Surat</h2>
+                            <p>${surat.subject}</p>
+                            <hr>
+                            <p style="text-align:left; white-space:pre-wrap;">${surat.content || "Isi surat tidak terbaca"}</p>
+                        </div>
+                    </body>
+                `;
+            } catch(e) { console.error(e); }
+        }
+
+        // 3. Fungsi Approve
+        async function approveDetail() {
+            if(!confirm("Anda yakin menyetujui surat ini?")) return;
+            try {
+                const res = await fetch(`/api/letters/${letterId}/approve`, {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ notes: "Disetujui dari halaman detail" })
+                });
+                if(res.ok) { alert("Sukses!"); window.location.href='pimpinan-dashboard.html'; }
+            } catch(e) { alert("Error"); }
+        }
+
+        // 4. Fungsi Reject
+        function openModalReject() { document.getElementById('modalReject').style.display='flex'; }
+        function closeModalReject() { document.getElementById('modalReject').style.display='none'; }
+        async function rejectDetail() {
+            const reason = document.getElementById('alasanTolak').value;
+            if(!reason) return alert("Isi alasan!");
+            try {
+                const res = await fetch(`/api/letters/${letterId}/reject`, {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ reason: reason })
+                });
+                if(res.ok) { alert("Ditolak!"); window.location.href='pimpinan-dashboard.html'; }
+            } catch(e) { alert("Error"); }
+        }
+
+        loadDetail();
+    </script>
+</body>
+</html>

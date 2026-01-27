@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Buat Surat Baru - SiPresisi TIK</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        /* --- STYLE FORM WIZARD --- */
+        .stepper-wrapper {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 40px;
+            position: relative;
+            max-width: 600px; 
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .stepper-wrapper::before {
+            content: "";
+            position: absolute;
+            top: 15px;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: #e4e6ef;
+            z-index: 1;
+        }
+        .stepper-item {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex: 1;
+        }
+        .step-counter {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            background: #fff;
+            border: 2px solid #e4e6ef;
+            color: #b5b5c3;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            margin-bottom: 6px;
+            transition: 0.3s;
+        }
+        .step-name {
+            font-size: 13px;
+            font-weight: 600;
+            color: #b5b5c3;
+        }
+
+        /* Active State */
+        .stepper-item.active .step-counter { background: #3699ff; border-color: #3699ff; color: #fff; }
+        .stepper-item.active .step-name { color: #181c32; }
+        .stepper-item.completed .step-counter { background: #1bc5bd; border-color: #1bc5bd; color: white; }
+
+        /* Form Input Styles */
+        .form-dynamic-group { margin-bottom: 20px; }
+        .form-dynamic-label { display: block; font-weight: 600; margin-bottom: 8px; color: #3f4254; }
+        .form-dynamic-input { 
+            width: 100%; padding: 12px; 
+            border: 1px solid #e4e6ef; border-radius: 8px; 
+            font-size: 14px; background: #f9f9f9;
+            transition: 0.3s;
+        }
+        .form-dynamic-input:focus { border-color: #3699ff; background: #fff; outline: none; }
+        textarea.form-dynamic-input { min-height: 120px; resize: vertical; }
+
+        /* Upload Box */
+        .upload-box {
+            border: 2px dashed #b5b5c3;
+            padding: 25px;
+            text-align: center;
+            border-radius: 12px;
+            background: #fbfbfb;
+            cursor: pointer;
+            transition: 0.3s;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        .upload-box:hover { border-color: #3699ff; background: #f1faff; }
+
+        /* Actions */
+        .form-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #ebedf3;
+        }
+        .btn-back {
+            background: #e4e6ef; color: #7e8299;
+            padding: 12px 25px; border-radius: 8px; font-weight: 600;
+        }
+
+        /* Grid */
+        .grid-2-col {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 30px;
+        }
+        @media (max-width: 768px) { .grid-2-col { grid-template-columns: 1fr; } }
+
+        /* Step Animation */
+        .wizard-step { display: none; animation: fadeIn 0.4s; }
+        .wizard-step.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    </style>
+</head>
+<body>
+
+    <div class="dashboard-container">
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <img src="images/logo-tik-polri.png" alt="Logo">
+                <h4>TIK POLRI</h4>
+            </div>
+            <div class="sidebar-menu">
+                <a href="staff-dashboard.html"><i class="fas fa-home"></i> Dashboard Staff</a>
+                <a href="staff-create.html" class="active"><i class="fas fa-plus-circle"></i> Buat Surat Baru</a>
+                <a href="#" onclick="logout()" class="logout-btn"><i class="fas fa-sign-out-alt"></i> Logout</a>
+            </div>
+        </nav>
+
+        <main class="main-content">
+            <div class="top-bar">
+                <h2 id="pageTitle">Buat Surat Baru</h2>
+                <div class="user-info">
+                    <div class="user-avatar" style="background: #2196f3;">S</div>
+                </div>
+            </div>
+
+            <div class="content-card" style="width: 100%; margin: 0; padding: 40px;">
+                
+                <div class="stepper-wrapper">
+                    <div class="stepper-item active" id="stepIndicator1">
+                        <div class="step-counter">1</div>
+                        <div class="step-name">Pilih Jenis</div>
+                    </div>
+                    <div class="stepper-item" id="stepIndicator2">
+                        <div class="step-counter">2</div>
+                        <div class="step-name">Isi Data</div>
+                    </div>
+                </div>
+
+                <div id="step1" class="wizard-step active">
+                    <div style="text-align:center; margin-bottom:40px; max-width: 600px; margin-left: auto; margin-right: auto;">
+                        <h3 style="font-size:22px;">Pilih Jenis Surat</h3>
+                        <p style="color:#b5b5c3;">Tentukan format surat yang ingin Anda buat.</p>
+                        
+                        <div class="form-group" style="text-align: left; margin-top: 30px;">
+                            <label style="font-weight:bold; margin-bottom:10px; display:block;">Jenis Template</label>
+                            <select id="selectJenisSurat" onchange="loadFormSchema()" style="width: 100%; padding: 15px; border: 1px solid #e4e6ef; border-radius: 10px; font-size:16px; background:white;">
+                                <option value="">-- Pilih Jenis --</option>
+                            </select>
+                        </div>
+
+                        <div id="templateInfo" style="display:none; padding:20px; background:#e1f0ff; border-radius:10px; margin-top:15px; color:#0061FF; border: 1px dashed #0061FF; text-align: left;">
+                            <div style="display:flex; align-items:center; gap:10px;">
+                                <i class="fas fa-check-circle" style="font-size:20px;"></i>
+                                <div>
+                                    <strong>Template Terpilih!</strong><br>
+                                    <span style="font-size:13px;">Formulir akan menyesuaikan secara otomatis.</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="margin-top: 30px;">
+                            <button onclick="nextStep()" id="btnNext1" disabled class="btn-blue" style="width: 100%; padding:15px; opacity: 0.5;">
+                                Lanjut Isi Data <i class="fas fa-arrow-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="step2" class="wizard-step">
+                    <div style="margin-bottom: 20px;">
+                        <h3 style="margin-bottom:10px;">Formulir Data Surat</h3>
+                        <p style="color:#b5b5c3; border-bottom:1px solid #ebedf3; padding-bottom:15px;">Lengkapi data di bawah ini.</p>
+                    </div>
+                    
+                    <form id="dynamicForm">
+                        </form>
+
+                    <h4 style="margin-top:40px; margin-bottom:20px; color:#181c32; font-size:16px; font-weight:700;">
+                        <i class="fas fa-info-circle"></i> Informasi Tambahan
+                    </h4>
+                    
+                    <div class="grid-2-col">
+                        <div class="form-group">
+                            <label class="form-dynamic-label">Perihal / Judul Surat</label>
+                            <input type="text" id="manualSubject" class="form-dynamic-input" placeholder="Contoh: Permohonan Cuti Tahunan">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-dynamic-label">Lampiran (Opsional)</label>
+                            <div class="upload-box" onclick="document.getElementById('fileLampiran').click()">
+                                <div style="display: flex; align-items: center; justify-content: center; gap: 15px;">
+                                    <i class="fas fa-cloud-upload-alt" style="font-size:28px; color:#3699ff;"></i>
+                                    <div style="text-align: left;">
+                                        <p style="margin:0; font-weight:600; font-size: 14px; color:#333;">Klik Upload File</p>
+                                        <p style="margin:0; font-size:12px; color:#999;">Max 5MB</p>
+                                    </div>
+                                </div>
+                                <input type="file" id="fileLampiran" accept=".pdf,.jpg,.jpeg,.png" style="display:none;" onchange="updateFileName(this)">
+                            </div>
+                            <p id="fileNameDisplay" style="text-align:center; font-size:12px; color:#0061FF; margin-top:5px;"></p>
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button onclick="prevStep()" class="btn btn-back">
+                            <i class="fas fa-arrow-left"></i> Kembali
+                        </button>
+                        
+                        <button onclick="submitSurat()" id="btnSave" class="btn-blue" style="padding:12px 50px; font-size:15px;">
+                            <i class="fas fa-paper-plane"></i> KIRIM SURAT
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const token = localStorage.getItem('token');
+        if(!token) window.location.href = 'login.html';
+
+        // CEK PARAMETER URL (Apakah Mode Edit?)
+        const urlParams = new URLSearchParams(window.location.search);
+        const editId = urlParams.get('edit'); 
+
+        let letterTypes = [];
+        let selectedType = null;
+
+        // 1. INIT: Load Data Jenis Surat Dulu
+        async function init() {
+            await loadLetterTypes(); // Tunggu load types selesai
+            
+            // Baru cek apakah ini Edit
+            if (editId) {
+                document.getElementById('pageTitle').innerText = "Revisi Surat";
+                document.getElementById('btnSave').innerHTML = '<i class="fas fa-save"></i> SIMPAN PERUBAHAN';
+                await loadEditData(editId);
+            }
+        }
+
+        async function loadLetterTypes() {
+            try {
+                const res = await fetch('/api/types', { headers: { 'Authorization': 'Bearer ' + token } });
+                const json = await res.json();
+                letterTypes = json.data;
+                const select = document.getElementById('selectJenisSurat');
+                letterTypes.forEach(type => {
+                    const option = document.createElement('option');
+                    option.value = type.id;
+                    option.innerText = type.name;
+                    select.appendChild(option);
+                });
+            } catch (e) { console.error(e); }
+        }
+
+        function loadFormSchema() {
+            const typeId = document.getElementById('selectJenisSurat').value;
+            const btnNext = document.getElementById('btnNext1');
+            const info = document.getElementById('templateInfo');
+
+            if (!typeId) {
+                btnNext.disabled = true;
+                btnNext.style.opacity = 0.5;
+                info.style.display = 'none';
+                return;
+            }
+            selectedType = letterTypes.find(t => t.id == typeId);
+            btnNext.disabled = false;
+            btnNext.style.opacity = 1;
+            info.style.display = 'block';
+        }
+
+        // RENDER FORMULIR
+        function renderForm(existingData = null) {
+            const container = document.getElementById('dynamicForm');
+            container.innerHTML = ''; 
+            
+            if(!selectedType) return; // Safety check
+
+            let schema = selectedType.form_schema;
+            if (typeof schema === 'string') {
+                try { schema = JSON.parse(schema); } catch (e) { schema = []; }
+            }
+            
+            if (!schema || schema.length === 0) {
+                container.innerHTML = '<p style="color:red; text-align:center;">Jenis surat ini belum memiliki form input.</p>';
+                return;
+            }
+
+            const gridDiv = document.createElement('div');
+            gridDiv.className = 'grid-2-col'; 
+            
+            schema.forEach(field => {
+                const wrapper = document.createElement('div');
+                if(field.type === 'textarea') wrapper.style.gridColumn = 'span 2';
+                wrapper.className = 'form-dynamic-group';
+                
+                const label = document.createElement('label');
+                label.className = 'form-dynamic-label';
+                label.innerText = field.label;
+
+                let input;
+                if (field.type === 'textarea') {
+                    input = document.createElement('textarea');
+                    input.rows = 4;
+                } else if (field.type === 'date') {
+                    input = document.createElement('input');
+                    input.type = 'date';
+                } else {
+                    input = document.createElement('input');
+                    input.type = 'text';
+                }
+                
+                input.className = 'form-dynamic-input';
+                input.name = field.key; 
+                input.placeholder = '...';
+                input.required = true;
+
+                // ISI DATA JIKA ADA (MODE EDIT)
+                if (existingData && existingData[field.key]) {
+                    input.value = existingData[field.key];
+                }
+
+                wrapper.appendChild(label);
+                wrapper.appendChild(input);
+                gridDiv.appendChild(wrapper);
+            });
+            container.appendChild(gridDiv);
+        }
+
+        // ============================================
+        // LOGIKA EDIT (FETCH DATA LAMA & ISI FORM)
+        // ============================================
+        async function loadEditData(id) {
+            try {
+                // 1. Ambil Data Surat dari Server
+                const res = await fetch(`/api/letters/${id}`, { headers: { 'Authorization': 'Bearer ' + token } });
+                const json = await res.json();
+                
+                if (!res.ok) {
+                    alert("Gagal memuat data surat: " + json.message);
+                    return;
+                }
+
+                const surat = json.data;
+
+                // 2. Pilih Jenis Surat di Dropdown
+                document.getElementById('selectJenisSurat').value = surat.letter_type_id;
+                document.getElementById('selectJenisSurat').disabled = true; // Kunci agar tidak ganti jenis
+                
+                // 3. Trigger Load Schema Manual
+                loadFormSchema(); 
+
+                // 4. Isi Input Judul
+                document.getElementById('manualSubject').value = surat.subject;
+
+                // 5. Parse Data Isi Surat (JSON)
+                let contentData = {};
+                try { contentData = JSON.parse(surat.content); } catch(e) {}
+                
+                // 6. Render Form + Isi Data
+                renderForm(contentData);
+
+                // 7. Langsung Pindah ke Step 2
+                nextStep(); 
+
+            } catch(e) { console.error(e); }
+        }
+
+        function updateFileName(input) {
+            const display = document.getElementById('fileNameDisplay');
+            if(input.files.length > 0) {
+                display.innerText = "File Terpilih: " + input.files[0].name;
+            } else {
+                display.innerText = "";
+            }
+        }
+
+        // NAVIGATION
+        function nextStep() {
+            if (!editId && document.getElementById('dynamicForm').innerHTML === "") renderForm();
+            document.getElementById('step1').classList.remove('active');
+            document.getElementById('step2').classList.add('active');
+            
+            document.getElementById('stepIndicator1').classList.add('completed');
+            document.getElementById('stepIndicator1').classList.remove('active');
+            document.getElementById('stepIndicator2').classList.add('active');
+            window.scrollTo(0,0);
+        }
+
+        function prevStep() {
+            document.getElementById('step2').classList.remove('active');
+            document.getElementById('step1').classList.add('active');
+
+            document.getElementById('stepIndicator2').classList.remove('active');
+            document.getElementById('stepIndicator1').classList.add('active');
+            document.getElementById('stepIndicator1').classList.remove('completed');
+        }
+
+        // SUBMIT
+        async function submitSurat() {
+            const subject = document.getElementById('manualSubject').value;
+            if(!subject) return alert("Judul Surat wajib diisi!");
+
+            const form = document.getElementById('dynamicForm');
+            if(!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+
+            const formDataHtml = new FormData(form);
+            const dataIsi = {};
+            formDataHtml.forEach((value, key) => dataIsi[key] = value);
+
+            const payload = new FormData();
+            payload.append('subject', subject);
+            payload.append('content', JSON.stringify(dataIsi));
+            payload.append('urgency', 'biasa');
+            
+            if (!editId) {
+                // Kalau buat baru, ambil ID dari dropdown
+                payload.append('letter_type_id', selectedType.id);
+            }
+            // Kalau edit, backend biasanya pakai ID surat yang lama, tidak perlu kirim type_id lagi jika tidak berubah
+
+            const fileInput = document.getElementById('fileLampiran');
+            if (fileInput.files.length > 0) payload.append('lampiran', fileInput.files[0]); 
+
+            const url = editId ? `/api/letters/${editId}` : '/api/letters';
+            const method = editId ? 'PUT' : 'POST';
+
+            try {
+                const btn = document.getElementById('btnSave');
+                const oriText = btn.innerHTML;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyimpan...';
+                btn.disabled = true;
+
+                const res = await fetch(url, {
+                    method: method,
+                    headers: { 'Authorization': 'Bearer ' + token },
+                    body: payload
+                });
+
+                const json = await res.json();
+                if (res.ok) {
+                    alert(editId ? "Revisi Berhasil Disimpan!" : "Surat Berhasil Dibuat!");
+                    window.location.href = 'staff-dashboard.html';
+                } else {
+                    alert("Gagal: " + json.message);
+                    btn.innerHTML = oriText;
+                    btn.disabled = false;
+                }
+            } catch (err) { 
+                alert("Error Koneksi"); 
+                document.getElementById('btnSave').disabled = false;
+            }
+        }
+
+        function logout() { localStorage.clear(); window.location.href = 'login.html'; }
+
+        init();
+    </script>
+</body>
+</html>

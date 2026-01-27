@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Kelola User - SiPresisi TIK</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <img src="images/images-removebg-preview.png" alt="Logo">
+                <h4>TIK POLRI</h4>
+            </div>
+            <div class="sidebar-menu">
+                <a href="admin-dashboard.html"><i class="fas fa-home"></i> Dashboard</a>
+                
+                <a href="admin-users.html" class="active"><i class="fas fa-users"></i> Kelola User</a>
+                
+                <a href="admin-types.html"><i class="fas fa-envelope-open-text"></i> Kelola Jenis Surat</a>
+                <a href="admin-logs.html"><i class="fas fa-history"></i> Log Aktivitas</a>
+                <a href="admin-archive.html" ><i class="fas fa-archive"></i> Arsip Surat</a>
+                <a href="#" onclick="logout()" class="logout-btn"><i class="fas fa-sign-out-alt"></i> Logout</a>
+            </div>
+        </nav>
+
+        <main class="main-content">
+            <div class="top-bar">
+                <h2>Kelola Pengguna Sistem</h2>
+                <button onclick="openModalUser()" class="btn-green" style="padding:10px 20px; font-size:14px;">
+                    <i class="fas fa-plus"></i> Tambah User
+                </button>
+            </div>
+
+            <div class="content-card">
+                <table border="1" style="width: 100%; border-collapse: collapse; border-color: #eee;">
+                    <thead>
+                        <tr style="background: #f8f9fa; text-align: left;">
+                            <th style="padding: 15px;">Nama Lengkap</th>
+                            <th style="padding: 15px;">Username/NRP</th>
+                            <th style="padding: 15px;">Role</th>
+                            <th style="padding: 15px;">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableUsers">
+                        <tr><td colspan="4" style="padding:15px;">⏳ Memuat data...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <div id="modalUser" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeModalUser()">&times;</span>
+            <h3>Tambah User Baru</h3>
+            <br>
+            <input type="text" id="inNama" placeholder="Nama Lengkap" style="width:100%; padding:10px; margin-bottom:10px;">
+            <input type="text" id="inUser" placeholder="Username" style="width:100%; padding:10px; margin-bottom:10px;">
+            <input type="text" id="inNrp" placeholder="NRP" style="width:100%; padding:10px; margin-bottom:10px;">
+            <input type="password" id="inPass" placeholder="Password" style="width:100%; padding:10px; margin-bottom:10px;">
+            
+            <select id="inRole" style="width:100%; padding:10px; margin-bottom:20px;">
+                <option value="staff">Staff</option>
+                <option value="pimpinan">Pimpinan</option>
+                <option value="admin">Admin</option>
+            </select>
+
+            <button onclick="simpanUser()" style="width:100%; padding:10px; background:#2196f3; color:white; border:none; border-radius:5px;">SIMPAN</button>
+        </div>
+    </div>
+
+    <script>
+        const token = localStorage.getItem('token');
+        if(!token) window.location.href = 'login.html';
+
+        // 1. LOAD DATA USER
+        async function loadUsers() {
+            const res = await fetch('/api/users', { headers: { 'Authorization': 'Bearer ' + token } });
+            const json = await res.json();
+            
+            const tbody = document.getElementById('tableUsers');
+            tbody.innerHTML = '';
+
+            json.data.forEach(u => {
+                let roleColor = '#eee';
+                if(u.role === 'admin') roleColor = '#e3f2fd'; // Biru muda
+                if(u.role === 'staff') roleColor = '#f1f8e9'; // Hijau muda
+                if(u.role === 'pimpinan') roleColor = '#fff3e0'; // Oranye muda
+
+                const row = `
+                    <tr>
+                        <td style="padding: 15px;"><strong>${u.full_name}</strong></td>
+                        <td style="padding: 15px;">${u.username} <br> <small style="color:#888">${u.nrp || '-'}</small></td>
+                        <td style="padding: 15px;"><span style="background:${roleColor}; padding:5px 10px; border-radius:15px; font-size:12px;">${u.role.toUpperCase()}</span></td>
+                        <td style="padding: 15px;">
+                            <button onclick="hapusUser(${u.id})" style="color:red; background:none; border:none; cursor:pointer;"><i class="fas fa-trash"></i> Hapus</button>
+                        </td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+        }
+
+        // 2. SIMPAN USER BARU
+        async function simpanUser() {
+            const body = {
+                full_name: document.getElementById('inNama').value,
+                username: document.getElementById('inUser').value,
+                nrp: document.getElementById('inNrp').value,
+                password: document.getElementById('inPass').value,
+                role: document.getElementById('inRole').value
+            };
+
+            const res = await fetch('/api/users', {
+                method: 'POST',
+                headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+
+            if(res.ok) {
+                alert("User Berhasil Ditambah!");
+                closeModalUser();
+                loadUsers();
+            } else {
+                alert("Gagal menambah user.");
+            }
+        }
+
+        // 3. HAPUS USER
+        async function hapusUser(id) {
+            if(confirm("Yakin hapus user ini?")) {
+                await fetch(`/api/users/${id}`, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token } });
+                loadUsers();
+            }
+        }
+
+        // UTILS
+        function openModalUser() { document.getElementById('modalUser').style.display = 'flex'; }
+        function closeModalUser() { document.getElementById('modalUser').style.display = 'none'; }
+        function logout() { localStorage.clear(); window.location.href = 'login.html'; }
+
+        loadUsers();
+    </script>
+</body>
+</html>
