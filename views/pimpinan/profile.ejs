@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body>
+
+    <div class="dashboard-container">
+        <%- include('../partials/sidebar') %>
+
+        <main class="main-content">
+            <%- include('../partials/header') %>
+
+            <% if (typeof success_msg !== 'undefined' && success_msg.length > 0) { %>
+                <script>
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Berhasil!',
+                        text: '<%= success_msg %>',
+                        timer: 3000,
+                        showConfirmButton: false
+                    });
+                </script>
+            <% } %>
+            
+            <% if (typeof error_msg !== 'undefined' && error_msg.length > 0) { %>
+                <script>
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Gagal!',
+                        text: '<%= error_msg %>',
+                        confirmButtonColor: '#d33'
+                    });
+                </script>
+            <% } %>
+
+            <div class="profile-layout">
+                
+                <div class="profile-left">
+                    <div class="card-header-title" style="color:#b45309; border-bottom: 1px solid #eee; padding-bottom: 15px; margin-bottom: 20px; font-weight: 700;">
+                        <i class="fas fa-user-shield"></i> Identitas Pimpinan
+                    </div>
+
+                    <form action="/pimpinan/profile/update" method="POST">
+                        
+                        <div class="form-group" style="margin-bottom: 15px;">
+                            <label style="font-size:12px; font-weight:bold; color:#64748b; display:block; margin-bottom:5px;">Username (Login)</label>
+                            <input type="text" class="form-input" value="<%= (typeof user !== 'undefined') ? user.username : '' %>" disabled style="background:#f1f5f9; cursor:not-allowed;">
+                        </div>
+
+                        <div class="form-group" style="margin-bottom: 15px;">
+                            <label style="font-size:12px; font-weight:bold; color:#64748b; display:block; margin-bottom:5px;">Nama Lengkap & Gelar</label>
+                            <input type="text" name="full_name" class="form-input" value="<%= (typeof user !== 'undefined') ? user.full_name : '' %>" required>
+                            <small style="color:#002BE8; font-size:11px;">*Akan muncul di tanda tangan surat.</small>
+                        </div>
+
+                        <div class="form-group" style="margin-bottom: 15px;">
+                            <label style="font-size:12px; font-weight:bold; color:#64748b; display:block; margin-bottom:5px;">NRP (Nomor Registrasi Pokok)</label>
+                            <input type="text" name="nrp" class="form-input" value="<%= (typeof user !== 'undefined') ? user.nrp : '' %>" required>
+                        </div>
+
+                        <div class="form-group" style="margin-bottom: 25px;">
+                            <label style="font-size:12px; font-weight:bold; color:#64748b; display:block; margin-bottom:5px;">Jabatan Struktural</label>
+                            <input type="text" name="position" class="form-input" value="<%= (typeof user !== 'undefined') ? user.position : '' %>">
+                            <small style="color:#002BE8; font-size:11px;">*Akan muncul di KOP Jabatan surat.</small>
+                        </div>
+
+                        <button type="submit" class="btn-blue" style="width:100%; background:#0f172a;">
+                            <i class="fas fa-save"></i> SIMPAN PERUBAHAN
+                        </button>
+                    </form>
+                </div>
+
+                <div class="profile-right">
+                    <div class="card-header-title" style="color:#b45309; border-bottom: 1px solid #eee; padding-bottom: 15px; margin-bottom: 20px; font-weight: 700;">
+                        <i class="fas fa-lock"></i> Keamanan Akun
+                    </div>
+
+                    <form action="/pimpinan/profile/password" method="POST">
+                        
+                        <div class="form-group" style="margin-bottom: 15px;">
+                            <label style="font-size:12px; font-weight:bold; color:#64748b; display:block; margin-bottom:5px;">Password Lama</label>
+                            <input type="password" name="old_password" class="form-input" placeholder="Masukkan password saat ini" required>
+                        </div>
+
+                        <div class="form-group" style="margin-bottom: 15px;">
+                            <label style="font-size:12px; font-weight:bold; color:#64748b; display:block; margin-bottom:5px;">Password Baru</label>
+                            <input type="password" name="new_password" class="form-input" placeholder="Min. 6 karakter" required>
+                        </div>
+
+                        <div class="form-group" style="margin-bottom: 25px;">
+                            <label style="font-size:12px; font-weight:bold; color:#64748b; display:block; margin-bottom:5px;">Ulangi Password Baru</label>
+                            <input type="password" name="confirm_password" class="form-input" required>
+                        </div>
+
+                        <button type="submit" class="btn-blue" style="width:100%; background:#b45309;">
+                            <i class="fas fa-key"></i> GANTI PASSWORD
+                        </button>
+                    </form>
+                </div>
+
+            </div>
+            
+            <div style="height: 50px;"></div>
+        </main>
+    </div>
+
+    <script>
+        function logout() {
+            Swal.fire({
+                title: 'Keluar?',
+                text: "Akhiri sesi ini?",
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Logout',
+                confirmButtonColor: '#ef4444',
+                cancelButtonText: 'Batal'
+            }).then((res) => { 
+                if (res.isConfirmed) {
+                    window.location.href = '/logout';
+                }
+            });
+        }
+    </script>
+</body>
+</html>

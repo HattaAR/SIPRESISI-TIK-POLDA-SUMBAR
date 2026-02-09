@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <style>
+        .badge-status-ok { background: #dcfce7; color: #166534; padding: 5px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; gap: 5px; }
+        .quote-box { background: #fffbeb; border-left: 3px solid #f59e0b; padding: 8px 12px; font-style: italic; color: #92400e; border-radius: 4px; font-size: 13px; margin-top: 5px; }
+    </style>
+</head>
+<body>
+
+    <div class="dashboard-container">
+        <%- include('../partials/sidebar') %>
+
+        <main class="main-content">
+            <%- include('../partials/header') %>
+
+            <div class="content-card" style="padding: 25px;">
+                <h3 style="margin-top:0; margin-bottom:5px;"> Tugas Masuk</h3>
+                <p style="color:#64748b; font-size:14px; margin-bottom:25px;">Daftar surat yang didisposisikan pimpinan kepada Anda.</p>
+
+                <div class="dispo-header">
+                    <div style="flex:1.5;">Dari Pimpinan</div>
+                    <div style="flex:2;">Detail Surat & Instruksi</div>
+                    <div style="flex:0.8; text-align:right;">Tindakan</div>
+                </div>
+
+                <div class="dispo-list">
+                    <% if (tasks && tasks.length > 0) { %>
+                        <% tasks.forEach(task => { %>
+                            
+                            <div class="dispo-item">
+                                <div class="col-pimpinan">
+                                    <div style="width:45px; height:45px; background:#e0e7ff; color:#3730a3; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:18px;">
+                                        <i class="fas fa-user-tie"></i>
+                                    </div>
+                                    <div>
+                                        <div style="font-weight:700; color:#1e293b; font-size:14px;">
+                                            <%= task.pimpinan_name %>
+                                        </div>
+                                        <div style="font-size:12px; color:#64748b;">
+                                            <i class="far fa-clock"></i> <%= new Date(task.created_at).toLocaleDateString('id-ID', {day:'numeric', month:'short'}) %>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-ref">
+                                    <div style="background:#f8fafc; padding:12px; border-radius:8px; border:1px solid #f1f5f9;">
+                                        <div style="display:flex; align-items:center; gap:8px; margin-bottom:5px;">
+                                            <i class="fas fa-file-alt" style="color:#475569;"></i>
+                                            <span style="font-weight:600; font-size:13px; color:#334155;">
+                                                <%= task.subject %>
+                                            </span>
+                                        </div>
+                                        <div style="font-size:11px; color:#64748b; margin-left:24px;">
+                                            Asal: <strong><%= task.external_sender %></strong> | No: <span style="color:#002BE8;"><%= task.letter_number || '-' %></span>
+                                        </div>
+                                        
+                                        <div class="quote-box">
+                                            <i class="fas fa-quote-left" style="opacity:0.5; font-size:10px;"></i> 
+                                            <%= task.instruction %>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-action">
+                                    <% if (task.status === 'COMPLETED') { %>
+                                        <div class="badge-status-ok" style="width:100%; justify-content:center;">
+                                            <i class="fas fa-check-double"></i> SELESAI
+                                        </div>
+                                    <% } else { %>
+                                        <div style="display:flex; flex-direction:column; gap:8px;">
+                                            
+                                            <% if(task.ada_file) { %>
+                                                <a href="/download-surat/<%= task.letter_id %>" target="_blank" class="btn-blue" style="background:#475569; font-size:12px; padding:8px;">
+                                                    <i class="fas fa-eye"></i> Baca Surat
+                                                </a>
+                                            <% } else { %>
+                                                <button disabled class="btn-blue" style="background:#e2e8f0; color:#94a3b8; font-size:12px; padding:8px; cursor:not-allowed;">
+                                                    <i class="fas fa-eye-slash"></i> No File
+                                                </button>
+                                            <% } %>
+
+                                            <a href="/staff/create?reff_id=<%= task.letter_id %>" class="btn-blue" style="font-size:12px; padding:8px;">
+                                                <i class="fas fa-pen-nib"></i> Balas / Lapor
+                                            </a>
+
+                                            <button onclick="markAsDone(<%= task.id %>)" class="btn-done" style="background:transparent; color:#166534; border:1px solid #166534; padding:6px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer;">
+                                                <i class="fas fa-check"></i> Selesai Langsung
+                                            </button>
+                                        </div>
+                                    <% } %>
+                                </div>
+                            </div>
+
+                        <% }) %>
+                    <% } else { %>
+                        <div style="text-align:center; padding:50px; border:2px dashed #e2e8f0; border-radius:12px; background:#f8fafc;">
+                            <i class="fas fa-inbox" style="font-size:40px; color:#cbd5e1; margin-bottom:15px;"></i>
+                            <p style="color:#94a3b8; font-size:14px;">Belum ada tugas masuk.</p>
+                        </div>
+                    <% } %>
+                </div>
+
+            </div>
+            <div style="height: 50px;"></div>
+        </main>
+    </div>
+
+   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+    function logout() { 
+        Swal.fire({
+            title: 'Keluar?',
+            text: "Akhiri sesi ini?",
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Logout',
+            confirmButtonColor: '#ef4444',
+            cancelButtonText: 'Batal'
+        }).then((res) => { if (res.isConfirmed) window.location.href = '/logout'; });
+    }
+
+    async function markAsDone(dispositionId) {
+        const result = await Swal.fire({
+            title: 'Selesaikan Tugas?',
+            text: "Status akan diubah menjadi SELESAI.",
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#166534',
+            cancelButtonColor: '#64748b',
+            confirmButtonText: 'Ya, Selesai',
+            cancelButtonText: 'Batal'
+        });
+
+        if (!result.isConfirmed) return;
+
+        Swal.fire({
+            title: 'Memproses...',
+            allowOutsideClick: false,
+            didOpen: () => { Swal.showLoading(); }
+        });
+
+        try {
+            const res = await fetch(`/api/dispositions/${dispositionId}/complete`, { method: 'POST' });
+
+            if(res.ok) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Tugas Selesai!',
+                    confirmButtonText: 'OK',
+                    confirmButtonColor: '#166534',
+                    backdrop: `rgba(22, 101, 52, 0.4) blur(5px)`
+                }).then(() => { window.location.reload(); });
+            } else {
+                Swal.fire('Gagal', 'Gagal update status.', 'error');
+            }
+        } catch(e) {
+            Swal.fire('Error', 'Koneksi gagal.', 'error');
+        }
+    }
+</script>
+</body>
+</html>

@@ -1,23 +1,23 @@
-// config/database.js
+
 const mysql = require('mysql2');
 const dotenv = require('dotenv');
 
 // Load environment variables
 dotenv.config();
 
-// Buat Connection Pool
+//  Connection Pool
 const pool = mysql.createPool({
     host: process.env.DB_HOST,
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME,
+    database: 'db_sisk',
     port: process.env.DB_PORT || 3306,
     waitForConnections: true,
-    connectionLimit: 10, // Maksimal 10 koneksi simultan
+    connectionLimit: 10, 
     queueLimit: 0
 });
 
-// Konversi ke Promise agar bisa pakai async/await
+
 const db = pool.promise();
 
 // Cek koneksi saat inisialisasi

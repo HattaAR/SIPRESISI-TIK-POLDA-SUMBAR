@@ -1,0 +1,198 @@
+<style>
+    /* ============================================================
+       STYLE SIDEBAR 
+       ============================================================ */
+    
+    /* 1. Sidebar (Default Desktop) */
+    .sidebar {
+        width: 280px;
+        background: #000000; 
+        color: white;
+        display: flex;
+        flex-direction: column;
+        z-index: 1005; /* Level Paling Tinggi agar di atas overlay */
+        flex-shrink: 0;
+        box-shadow: 4px 0 10px rgba(0,0,0,0.1);
+        
+        /* Sticky Desktop */
+        position: sticky;
+        top: 0;
+        height: 100vh;
+        overflow-y: auto;
+        transition: left 0.3s ease-in-out;
+    }
+
+    /* 2. Tombol Close (Hanya Muncul di HP) */
+    .mobile-close-btn { 
+        display: none; 
+        text-align: right; 
+        padding: 15px 20px 0;
+    }
+    
+    .mobile-close-btn i {
+        font-size: 24px;
+        color: white;
+        cursor: pointer;
+        padding: 5px;
+        transition: 0.2s;
+    }
+    .mobile-close-btn i:hover { color: #f44336; transform: scale(1.1); }
+
+    /* 3. Header Sidebar */
+    .sidebar-header {
+        padding: 20px 0; text-align: center;
+        background: rgba(0,0,0,0.2);
+        border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    .sidebar-header img { width: 90px; height: auto; transition: 0.3s; }
+
+    /* 4. Menu Items */
+    .sidebar-menu { flex: 1; overflow-y: auto; padding: 15px 10px; }
+    .sidebar-menu::-webkit-scrollbar { width: 4px; }
+    .sidebar-menu::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+
+    .menu-category {
+        font-size: 10px; color: #6c757d; margin: 20px 0 8px 15px;
+        text-transform: uppercase; font-weight: 800; letter-spacing: 1px;
+    }
+
+    .sidebar-menu a:not(.btn-logout-custom) {
+        display: flex; align-items: center; padding: 11px 15px;
+        color: #aebcd5; text-decoration: none; border-radius: 8px;
+        margin-bottom: 4px; font-size: 13px; font-weight: 500; transition: 0.2s;
+    }
+    .sidebar-menu a:hover { background: rgba(255,255,255,0.08); color: white; transform: translateX(3px); }
+    .sidebar-menu a.active { background: #002BE8; color: white; font-weight: 600; box-shadow: 0 4px 10px rgba(0,43,232,0.3); }
+    .sidebar-menu i { width: 24px; text-align: center; margin-right: 10px; font-size: 15px; }
+
+    .sidebar-footer {
+        padding: 20px; border-top: 1px solid rgba(255,255,255,0.05);
+        background: rgba(0,0,0,0.2);
+    }
+    .btn-logout-custom {
+        display: flex; align-items: center; justify-content: center;
+        width: 100%; padding: 12px; background: #c62828; color: white !important;
+        border-radius: 8px; text-decoration: none; font-weight: 700; font-size: 13px; transition: 0.3s;
+    }
+
+    /* =========================================
+       MEDIA QUERY (KHUSUS HP)
+       ========================================= */
+    @media (max-width: 768px) {
+        .mobile-close-btn { display: block !important; }
+
+        .sidebar {
+            position: fixed !important; /* Paksa Fixed agar mengambang */
+            left: -300px; /* Sembunyi di kiri */
+            top: 0; bottom: 0;
+            height: 100vh !important;
+            width: 280px !important;
+            z-index: 9999 !important; /* Paling Depan */
+        }
+
+        /* Kelas Aktif untuk Memunculkan Sidebar */
+        .sidebar.show-mobile {
+            left: 0 !important;
+            box-shadow: 5px 0 25px rgba(0,0,0,0.5);
+        }
+    }
+</style>
+
+<nav class="sidebar" id="mySidebar">
+    
+    <div class="mobile-close-btn">
+        <i class="fas fa-times" onclick="tutupSidebar()"></i>
+    </div>
+
+    <div class="sidebar-header">
+        <img src="/images/images-removebg-preview.png" alt="Logo" onerror="this.style.display='none'">
+    </div>
+    
+    <div class="sidebar-menu">
+        <% if(typeof user !== 'undefined' && user.role === 'staff') { %>
+            <div class="menu-category">Menu Utama</div>
+            <a href="/staff/dashboard" class="<%= (typeof page !== 'undefined' && page === 'dashboard') ? 'active' : '' %>">
+                <i class="fas fa-th-large"></i> Dashboard
+            </a>
+            <a href="/staff/dispositions" class="<%= page === 'dispositions' ? 'active' : '' %>">
+        <i class="fas fa-tasks"></i> Tugas Masuk
+    </a>
+            <a href="/staff/create" class="<%= (typeof page !== 'undefined' && page === 'create') ? 'active' : '' %>">
+                <i class="fas fa-plus-circle"></i> Buat Surat
+            </a>
+            <div class="menu-category">Data</div>
+            <a href="/staff/archive" class="<%= (typeof page !== 'undefined' && page === 'archive') ? 'active' : '' %>">
+                <i class="fas fa-folder-open"></i> Arsip Surat
+            </a>
+            <a href="/staff/profile" class="<%= (typeof page !== 'undefined' && page === 'profile') ? 'active' : '' %>">
+                <i class="fas fa-user-cog"></i> Profil
+            </a>
+        <% } %>
+
+        <% if (typeof user !== 'undefined' && user.role === 'pimpinan') { %>
+            <div class="menu-category">Menu Utama</div>
+            <a href="/pimpinan/dashboard" class="<%= (typeof page !== 'undefined' && page === 'dashboard') ? 'active' : '' %>">
+                <i class="fas fa-briefcase"></i> Dashboard Approval
+            </a>
+            <a href="/pimpinan/history" class="<%= (typeof page !== 'undefined' && page === 'history') ? 'active' : '' %>">
+                <i class="fas fa-history"></i> Riwayat
+            </a>
+            <div class="menu-category">Data</div>
+            <a href="/pimpinan/reports" class="<%= (typeof page !== 'undefined' && page === 'reports') ? 'active' : '' %>">
+                <i class="fas fa-print"></i> Laporan
+            </a>
+            <a href="/pimpinan/profile" class="<%= (typeof page !== 'undefined' && page === 'profile') ? 'active' : '' %>">
+                <i class="fas fa-user-shield"></i> Profil
+            </a>
+        <% } %>
+
+        <% if (typeof user !== 'undefined' && user.role === 'admin') { %>
+            <div class="menu-category">Admin</div>
+            <a href="/admin/dashboard" class="<%= (typeof page !== 'undefined' && page === 'dashboard') ? 'active' : '' %>">
+                <i class="fas fa-tachometer-alt"></i> Dashboard
+            </a>
+            <div class="menu-category">Surat</div>
+           <a href="/admin/incoming-mail" class="<%= page === 'incoming' ? 'active' : '' %>">
+              <i class="fas fa-file-import"></i> Reg. Surat Masuk
+             </a>
+            <a href="/admin/types" class="<%= (typeof page !== 'undefined' && page === 'types') ? 'active' : '' %>">
+                <i class="fas fa-envelope-open-text"></i> Jenis Surat
+            </a>
+            <a href="/admin/archive" class="<%= (typeof page !== 'undefined' && page === 'archive') ? 'active' : '' %>">
+                <i class="fas fa-archive"></i> Arsip
+            </a>
+            <div class="menu-category">Sistem</div>
+            <a href="/admin/users" class="<%= (typeof page !== 'undefined' && page === 'users') ? 'active' : '' %>">
+                <i class="fas fa-users-cog"></i> Kelola User
+            </a>
+            <a href="/admin/logs" class="<%= (typeof page !== 'undefined' && page === 'logs') ? 'active' : '' %>">
+                <i class="fas fa-history"></i> Log Aktivitas
+            </a>
+        <% } %>
+    </div>
+
+    <div class="sidebar-footer">
+        <a href="#" onclick="logout()" class="btn-logout-custom">
+            <i class="fas fa-sign-out-alt"></i> LOGOUT
+        </a>
+    </div>
+</nav>
+
+<script>
+    // Fungsi Tutup (Dipanggil saat tombol X ditekan)
+    function tutupSidebar() {
+        const sidebar = document.getElementById('mySidebar');
+        const overlay = document.querySelector('.sidebar-overlay');
+        
+        // Hapus class 'show-mobile'
+        if(sidebar) sidebar.classList.remove('show-mobile');
+        
+        // Sembunyikan overlay
+        if(overlay) overlay.style.display = 'none';
+    }
+
+    // Fungsi Logout
+    function logout() {
+        if(confirm("Yakin ingin keluar?")) window.location.href = '/logout';
+    }
+</script>

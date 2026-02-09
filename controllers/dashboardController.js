@@ -9,11 +9,9 @@ exports.getStats = async (req, res) => {
         let query = "";
         let params = [];
 
-        // ============================================================
+     
         // SKENARIO 1: JIKA YANG LOGIN ADALAH STAFF
-        // ============================================================
         if (role === 'staff') {
-            // Hitung surat milik DIA SENDIRI (created_by_id = userId)
             query = `
                 SELECT 
                     COUNT(*) as total,
@@ -25,24 +23,22 @@ exports.getStats = async (req, res) => {
             `;
             params = [userId];
         
-        // ============================================================
+       
         // SKENARIO 2: JIKA YANG LOGIN ADALAH PIMPINAN
-        // ============================================================
+        
         } else if (role === 'pimpinan') {
-            // 1. Pending: Hitung SEMUA surat status 'pending' dari SIAPAPUN (Global)
-            // 2. Approved/Rejected: Hitung dari tabel HISTORY (yang pernah dia klik)
             query = `
                 SELECT 
                     (SELECT COUNT(*) FROM letters WHERE status = 'pending') as pending,
                     (SELECT COUNT(*) FROM approval_history WHERE actor_id = ? AND action = 'approve') as approved,
                     (SELECT COUNT(*) FROM approval_history WHERE actor_id = ? AND action = 'reject') as rejected
             `;
-            // Params harus dua kali userId karena ada dua tanda tanya (?) di query history
+            
             params = [userId, userId];
         
-        // ============================================================
+       
         // SKENARIO 3: JIKA YANG LOGIN ADALAH ADMIN
-        // ============================================================
+        
         } else {
             // Hitung Data Master Sistem
             query = `

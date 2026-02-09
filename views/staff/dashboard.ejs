@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body>
+
+    <div class="dashboard-container">
+        <%- include('../partials/sidebar') %>
+
+        <main class="main-content">
+            <%- include('../partials/header') %>
+
+            <div class="stats-grid">
+                
+                <a href="/staff/archive?search=DRAFT" class="stat-card-link card-draft">
+                    <div>
+                        <div class="stat-label">Draft Surat</div>
+                        <div class="stat-value"><%= stats.draft || 0 %></div>
+                    </div>
+                    <div class="icon-box"><i class="fas fa-file-alt"></i></div>
+                </a>
+
+                <a href="/staff/archive?search=PENDING" class="stat-card-link card-pending">
+                    <div>
+                        <div class="stat-label">Menunggu</div>
+                        <div class="stat-value"><%= stats.pending || 0 %></div>
+                    </div>
+                    <div class="icon-box"><i class="fas fa-clock"></i></div>
+                </a>
+
+                <a href="/staff/archive?search=APPROVED" class="stat-card-link card-approved">
+                    <div>
+                        <div class="stat-label">Disetujui</div>
+                        <div class="stat-value"><%= stats.approved || 0 %></div>
+                    </div>
+                    <div class="icon-box"><i class="fas fa-check-circle"></i></div>
+                </a>
+
+                <a href="/staff/archive?search=REJECTED" class="stat-card-link card-rejected">
+                    <div>
+                        <div class="stat-label">Perlu Revisi</div>
+                        <div class="stat-value"><%= stats.rejected || 0 %></div>
+                    </div>
+                    <div class="icon-box"><i class="fas fa-exclamation-triangle"></i></div>
+                </a>
+
+            </div>
+
+            <a href="/staff/create" class="btn-create-big">
+                <i class="fas fa-plus-circle fa-lg"></i> BUAT SURAT BARU
+            </a>
+
+            <div class="premium-table-container">
+                <div class="table-header-custom">
+                    <div class="table-title-wrap">
+                        <i class="fas fa-history" style="color:#3b82f6;"></i>
+                        <h3 class="table-title-text">Aktivitas Terkini</h3>
+                    </div>
+                    <a href="/staff/archive" class="link-see-all">Lihat Semua &rarr;</a>
+                </div>
+
+                <div class="list-header grid-row-layout">
+                    <div>TANGGAL</div>
+                    <div>JENIS SURAT</div>
+                    <div>PERIHAL</div>
+                    <div>STATUS</div>
+                    <div style="text-align:right;">AKSI</div>
+                </div>
+
+                <div>
+                    <% if (letters && letters.length > 0) { %>
+                        <% letters.forEach(item => { %>
+                            <div class="list-item grid-row-layout">
+                                
+                                <div class="data-date" style="font-weight:600; color:#64748b; font-size:13px;">
+                                    <span class="mobile-label">Tanggal</span>
+                                    <%= new Date(item.created_at).toLocaleDateString('id-ID', {day:'numeric', month:'short', year:'numeric'}) %>
+                                </div>
+
+                                <div class="data-type">
+                                    <span class="mobile-label">Jenis</span>
+                                    <%= item.type_name || 'Surat Umum' %>
+                                    <div style="font-size:11px; color:#94a3b8; margin-top:2px;">
+                                        <%= item.origin_type === 'EXTERNAL' ? '(Masuk)' : '(Keluar)' %>
+                                    </div>
+                                </div>
+
+                                <div class="data-subject" style="font-weight:600; color:#1e293b;">
+                                    <span class="mobile-label">Perihal</span>
+                                    <%= item.subject %>
+                                    <% if(item.letter_number) { %>
+                                        <div style="font-size:11px; font-family:monospace; color:#2563eb; margin-top:3px; font-weight:normal;">
+                                            No: <%= item.letter_number %>
+                                        </div>
+                                    <% } %>
+                                </div>
+
+                                <div class="data-status">
+                                    <span class="mobile-label">Status</span>
+                                    <% 
+                                        let st = (item.status || '').toUpperCase();
+                                        let badgeClass = "bg-draft";
+                                        let icon = "fa-clock";
+                                        
+                                        if(st === 'APPROVED') { badgeClass = "bg-approved"; icon="fa-check-circle"; }
+                                        else if(st === 'REJECTED') { badgeClass = "bg-rejected"; icon="fa-times-circle"; }
+                                        else if(st === 'DRAFT') { badgeClass = "bg-draft"; icon="fa-file-alt"; }
+                                        else if(st === 'PENDING') { badgeClass = "bg-pending"; icon="fa-clock"; }
+                                    %>
+                                    <span class="badge-pill <%= badgeClass %>">
+                                        <i class="fas <%= icon %>"></i> <%= st %>
+                                    </span>
+                                </div>
+
+                                <div class="data-aksi" style="text-align:right;">
+                                    
+                                    <% if(st === 'APPROVED' || item.origin_type === 'EXTERNAL') { %>
+                                        <% 
+                                            let downloadUrl = '#';
+                                            if (item.origin_type === 'EXTERNAL') {
+                                                try { downloadUrl = JSON.parse(item.content_data || '{}').file_url || '#'; } catch(e){}
+                                            } else {
+                                                downloadUrl = `/api/letters/${item.id}/download`;
+                                            }
+                                        %>
+                                        <a href="<%= downloadUrl %>" target="_blank" class="btn-mini mini-edit" title="Unduh File" style="width:auto; padding:0 12px; gap:6px; font-weight:700; color:#0284c7; background:#e0f2fe;">
+                                            <i class="fas fa-download"></i> Unduh
+                                        </a>
+
+                                    <% } else if (st === 'DRAFT') { %>
+                                        <div style="display:flex; gap:5px; justify-content:flex-end;">
+                                            <a href="/staff/create?edit=<%= item.id %>" class="btn-mini mini-edit" title="Edit"><i class="fas fa-pencil-alt"></i></a>
+                                            <button onclick="hapusSurat(<%= item.id %>)" class="btn-mini mini-delete" title="Hapus"><i class="fas fa-trash"></i></button>
+                                            <button onclick="ajukanSurat(<%= item.id %>)" class="btn-mini" style="background:#dcfce7; color:#166534;" title="Kirim"><i class="fas fa-paper-plane"></i></button>
+                                        </div>
+
+                                    <% } else if (st === 'REJECTED') { %>
+                                        <div style="display:flex; gap:5px; justify-content:flex-end;">
+                                            <button onclick="showNote(`<%= item.pimpinan_note %>`)" class="btn-mini mini-delete" title="Lihat Catatan" style="width:auto; padding:0 10px; gap:5px;">
+                                                <i class="fas fa-comment-alt"></i> Note
+                                            </button>
+                                            <a href="/staff/create?edit=<%= item.id %>" class="btn-mini mini-edit" title="Perbaiki" style="width:auto; padding:0 10px; gap:5px;">
+                                                <i class="fas fa-wrench"></i> Fix
+                                            </a>
+                                        </div>
+
+                                    <% } else { %>
+                                        <span style="font-size:11px; color:#cbd5e1;">-</span>
+                                    <% } %>
+                                </div>
+
+                            </div>
+                        <% }) %>
+                    <% } else { %>
+                        <div style="padding:50px; text-align:center; color:#94a3b8;">
+                            <i class="fas fa-folder-open" style="font-size:40px; margin-bottom:15px; opacity:0.3;"></i><br>
+                            Belum ada aktivitas surat.
+                        </div>
+                    <% } %>
+                </div>
+            </div>
+
+            <div style="height: 50px;"></div>
+        </main>
+    </div>
+
+    <div id="modalRevisi" class="modal-overlay">
+        <div class="modal-box">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                <h3 style="margin:0; color:#dc2626;"><i class="fas fa-exclamation-circle"></i> Catatan Revisi</h3>
+                <span onclick="closeNote()" style="cursor:pointer; font-size:24px;">&times;</span>
+            </div>
+            <div style="background:#fef2f2; padding:15px; border-radius:8px; color:#991b1b; font-size:14px; line-height:1.6; border-left:4px solid #ef4444;">
+                <span id="noteContent">...</span>
+            </div>
+            <div style="text-align:right; margin-top:20px;">
+                <button onclick="closeNote()" style="background:#1e293b; color:white; border:none; padding:8px 16px; border-radius:6px; cursor:pointer;">Tutup</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Modal Note
+        function showNote(note) {
+            document.getElementById('noteContent').innerText = (note && note !== 'null') ? note : "Tidak ada catatan.";
+            document.getElementById('modalRevisi').style.display = 'flex';
+        }
+        function closeNote() {
+            document.getElementById('modalRevisi').style.display = 'none';
+        }
+
+        // SweetAlert - Kirim Surat
+        async function ajukanSurat(id) {
+            const result = await Swal.fire({
+                title: 'Kirim ke Pimpinan?',
+                text: "Surat akan dikirim untuk diperiksa.",
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#166534',
+                cancelButtonColor: '#64748b',
+                confirmButtonText: 'Ya, Kirim',
+                cancelButtonText: 'Batal'
+            });
+
+            if (!result.isConfirmed) return;
+
+            Swal.fire({ title: 'Mengirim...', didOpen: () => Swal.showLoading() });
+
+            try {
+                // Perhatikan method POST agar sesuai backend
+                const res = await fetch(`/api/letters/${id}/send`, { method: 'POST' }); 
+                const data = await res.json();
+                
+                if(res.ok) {
+                    Swal.fire('Terkirim!', data.message, 'success').then(() => window.location.reload());
+                } else {
+                    Swal.fire('Gagal', data.message, 'error');
+                }
+            } catch(e) { Swal.fire('Error', 'Koneksi gagal', 'error'); }
+        }
+
+        // SweetAlert - Hapus Surat
+        async function hapusSurat(id) {
+            const result = await Swal.fire({
+                title: 'Hapus Draft?',
+                text: "Draft ini akan dihapus permanen.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444',
+                cancelButtonColor: '#64748b',
+                confirmButtonText: 'Ya, Hapus',
+                cancelButtonText: 'Batal'
+            });
+
+            if (!result.isConfirmed) return;
+
+            Swal.fire({ title: 'Menghapus...', didOpen: () => Swal.showLoading() });
+
+            try {
+                const res = await fetch(`/api/letters/${id}`, { method: 'DELETE' });
+                const data = await res.json();
+
+                if(res.ok) {
+                    Swal.fire('Terhapus!', data.message, 'success').then(() => window.location.reload());
+                } else {
+                    Swal.fire('Gagal', data.message, 'error');
+                }
+            } catch(e) { Swal.fire('Error', 'Koneksi gagal', 'error'); }
+        }
+
+        function logout() {
+            Swal.fire({
+                title: 'Keluar?', text: "Akhiri sesi ini?", icon: 'question',
+                showCancelButton: true, confirmButtonText: 'Logout', confirmButtonColor: '#ef4444'
+            }).then((res) => { if (res.isConfirmed) window.location.href = '/logout'; });
+        }
+    </script>
+</body>
+</html>

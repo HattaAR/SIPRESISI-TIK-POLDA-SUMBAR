@@ -1,0 +1,118 @@
+<% 
+    // 1. Inisialisasi Default
+    let roleLabel = 'Anggota TIK';
+    let avatarColor = '#43a047'; 
+    let avatarText = '#ffffff'; 
+
+    // 2. Logika Role
+    if (typeof user !== 'undefined' && user.role) {
+        const userRole = user.role.toLowerCase();
+        if (userRole === 'pimpinan') {
+            roleLabel = 'Kepala Bidang TIK'; avatarColor = '#fbc02d'; avatarText = '#333333';
+        } else if (userRole === 'admin') {
+            roleLabel = 'Administrator'; avatarColor = '#002BE8'; avatarText = '#ffffff';
+        }
+    }
+
+    // 3. Logika Nama
+    let initialName = 'U';
+    let displayName = 'Pengguna';
+    
+    if (typeof user !== 'undefined') {
+        displayName = user.full_name || user.name || 'Pengguna';
+        initialName = displayName.charAt(0).toUpperCase();
+    }
+%>
+
+<style>
+    /* Default: Tombol Sembunyi di Laptop/PC */
+    .btn-mobile-menu {
+        display: none;
+    }
+
+    /* Khusus HP (Layar di bawah 768px) */
+    @media (max-width: 768px) {
+        .btn-mobile-menu {
+            display: flex !important; /* Paksa Muncul */
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            font-size: 24px;
+            color: #333;
+            cursor: pointer;
+            margin-right: 10px;
+            background: #f1f5f9; /* Latar belakang tipis agar terlihat tombol */
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+        
+        /* Agar ikon Font Awesome terlihat jelas */
+        .btn-mobile-menu i {
+            pointer-events: none; /* Agar klik tembus ke div */
+        }
+    }
+</style>
+
+<div class="top-bar">
+    
+    <div class="header-title">
+        <div style="display:flex; align-items:center; gap:10px;">
+            <i class="fas fa-bars btn-mobile-menu" onclick="document.querySelector('.sidebar').classList.toggle('show-mobile')"></i>
+            <h2><%= typeof title !== 'undefined' ? title : 'Dashboard' %></h2>
+        </div>
+    </div>
+
+    <div class="user-profile" onclick="window.location.href='/staff/profile'" title="Klik untuk edit profil">
+        
+        <div class="user-info">
+            <span class="user-name">
+                <%= user.full_name || user.username || 'User' %>
+            </span>
+            
+            <span class="user-role">
+                <% if (user.job_title) { %>
+                    <%= user.job_title %>  <% } else { %>
+                    <%= user.role === 'admin' ? 'Administrator' : (user.role === 'staff' ? 'Staff Anggota' : 'Pimpinan') %>
+                <% } %>
+            </span>
+        </div>
+
+        <div class="user-avatar">
+            <% 
+                let initial = 'U';
+                // Ambil huruf pertama dari Nama Lengkap atau Username
+                if (user.full_name) { initial = user.full_name.charAt(0).toUpperCase(); }
+                else if (user.username) { initial = user.username.charAt(0).toUpperCase(); }
+            %>
+            <%= initial %>
+        </div>
+
+    </div>
+
+</div>
+
+<div class="sidebar-overlay" onclick="tutupSidebar()"></div>
+
+<script>
+    function bukaSidebar() {
+        const sidebar = document.getElementById('mySidebar');
+        const overlay = document.querySelector('.sidebar-overlay');
+        
+        // Debugging: Cek apakah elemen ditemukan
+        if(!sidebar) console.error("Sidebar tidak ditemukan! Pastikan ID 'mySidebar' ada di sidebar.ejs");
+
+        if(sidebar) sidebar.classList.add('show-mobile');
+        if(overlay) overlay.style.display = 'block';
+    }
+</script>
+
+<style>
+    .sidebar-overlay {
+        display: none;
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.5); 
+        z-index: 1000;
+        backdrop-filter: blur(2px); /* Efek blur agar elegan */
+    }
+</style>

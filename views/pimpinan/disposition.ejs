@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body>
+
+    <div class="dashboard-container">
+        <%- include('../partials/sidebar') %>
+
+        <main class="main-content">
+            <%- include('../partials/header') %>
+
+            <a href="/pimpinan/history" style="display: inline-flex; align-items: center; gap: 5px; text-decoration: none; color: #64748b; font-weight: 600; margin-bottom: 15px; font-size: 13px;">
+                <i class="fas fa-arrow-left"></i> Kembali ke Riwayat
+            </a>
+
+            <div class="split-view">
+                
+                <div class="left-panel">
+                    <h3 style="margin-top:0; font-size:16px; color:#0f172a; border-bottom:2px solid #002BE8; padding-bottom:10px; margin-bottom:20px;">
+                        <i class="fas fa-info-circle"></i> Detail Dokumen
+                    </h3>
+
+                    <div class="meta-group">
+                        <span class="meta-label">Jenis Dokumen</span>
+                        <div class="meta-value">
+                            <% if(letter.origin_type == 'EXTERNAL') { %>
+                                <span style="color:#e11d48;"><i class="fas fa-arrow-down"></i> SURAT MASUK</span>
+                            <% } else { %>
+                                <span style="color:#2563eb;"><i class="fas fa-arrow-up"></i> SURAT KELUAR</span>
+                            <% } %>
+                        </div>
+                    </div>
+                    <div class="meta-group">
+                        <span class="meta-label">Nomor & Tanggal</span>
+                        <div class="meta-value" style="color:#002BE8;"><%= letter.letter_number || '(Draft)' %></div>
+                        <div style="font-size:12px; color:#64748b;">
+                            <%= new Date(letter.created_at).toLocaleDateString('id-ID', {day:'numeric', month:'long', year:'numeric'}) %>
+                        </div>
+                    </div>
+                    <div class="meta-group">
+                        <span class="meta-label">Perihal</span>
+                        <div class="meta-value" style="font-weight:400;"><%= letter.subject %></div>
+                    </div>
+
+                    <div style="margin-top: 20px; padding-top: 20px; border-top: 2px solid #f1f5f9;">
+                        
+                        <% 
+                            let lastStatus = null;
+                            let lastStaffName = '';
+                            // Cek jika variable tracks ada dan tidak kosong
+                            if(typeof tracks !== 'undefined' && tracks.length > 0) {
+                                lastStatus = tracks[0].status; 
+                                lastStaffName = tracks[0].staff_name;
+                            }
+                        %>
+
+                        <% if (letter.origin_type === 'INTERNAL' && letter.status === 'PENDING') { %>
+                            <p style="font-size:12px; color:#eab308; text-align:center;"><i class="fas fa-bell"></i> Menunggu Persetujuan Anda</p>
+                            <button onclick="approveDetail(<%= letter.id %>)" class="btn-block btn-approve"><i class="fas fa-check"></i> SETUJUI</button>
+                            <button onclick="openModalReject()" class="btn-block btn-reject"><i class="fas fa-times"></i> TOLAK</button>
+                        
+                        <% } else if (letter.origin_type === 'EXTERNAL') { %>
+                            
+                            <h4 style="font-size:14px; margin-bottom:10px;">Tindakan Pimpinan:</h4>
+
+                            <% if (lastStatus === 'COMPLETED') { %>
+                                <div style="background:#dcfce7; border:1px solid #86efac; padding:15px; border-radius:8px; text-align:center;">
+                                    <i class="fas fa-check-circle" style="font-size:30px; color:#166534; margin-bottom:5px;"></i>
+                                    <div style="font-weight:bold; color:#14532d;">TUGAS SELESAI</div>
+                                    <div style="font-size:12px; color:#15803d;">Oleh: <%= lastStaffName %></div>
+                                </div>
+
+                            <% } else if (lastStatus === 'UNREAD' || lastStatus === 'READ' || lastStatus === 'PROCESS') { %>
+                                <div style="background:#fffbeb; border:1px solid #fcd34d; padding:15px; border-radius:8px; text-align:center;">
+                                    <i class="fas fa-spinner fa-spin" style="font-size:24px; color:#b45309; margin-bottom:5px;"></i>
+                                    <div style="font-weight:bold; color:#92400e;">SEDANG DIPROSES</div>
+                                    <div style="font-size:12px; color:#b45309;">Staff: <%= lastStaffName %></div>
+                                </div>
+
+                            <% } else { %>
+                                <div style="background:#eff6ff; border:1px dashed #bfdbfe; padding:15px; border-radius:8px; text-align:center;">
+                                    <p style="font-size:12px; color:#1e40af; margin-bottom:10px;">Surat ini belum didisposisikan.</p>
+                                    <button onclick="openDispositionModal()" class="btn-block btn-disposition">
+                                        <i class="fas fa-paper-plane"></i> DISPOSISI SEKARANG
+                                    </button>
+                                </div>
+                            <% } %>
+
+                        <% } else { %>
+                             <div style="text-align:center; padding:10px; background:#f1f5f9; border-radius:8px; font-weight:bold; color:#64748b;">
+                                STATUS: <%= letter.status %>
+                            </div>
+                        <% } %>
+
+                    </div>
+
+                    <div class="tracking-container">
+                        <div style="font-size:13px; font-weight:bold; margin-bottom:15px; color:#333; border-bottom:1px solid #e2e8f0; padding-bottom:5px;">
+                            <i class="fas fa-history"></i> Jejak Disposisi
+                        </div>
+                        
+                        <ul class="track-list">
+                            <% if (typeof tracks !== 'undefined' && tracks.length > 0) { %>
+                                <% tracks.forEach((t, index) => { %>
+                                    <li class="track-item <%= index === 0 ? 'latest' : '' %> <%= t.status === 'COMPLETED' ? 'completed' : '' %>">
+                                        <div class="track-icon">
+                                            <% if(t.status === 'COMPLETED') { %> <i class="fas fa-check"></i>
+                                            <% } else { %> <i class="fas fa-arrow-right"></i> <% } %>
+                                        </div>
+                                        <div class="track-content">
+                                            <div class="track-header">
+                                                <span><%= new Date(t.created_at).toLocaleDateString('id-ID', {day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'}) %></span>
+                                                
+                                                <% if(t.status === 'COMPLETED') { %>
+                                                    <span class="badge-status bs-completed">SELESAI</span>
+                                                <% } else if(t.status === 'READ') { %>
+                                                    <span class="badge-status bs-process">DIBACA</span>
+                                                <% } else { %>
+                                                    <span class="badge-status bs-sent">TERKIRIM</span>
+                                                <% } %>
+                                            </div>
+                                            <span class="track-user">Kepada: <%= t.staff_name %></span>
+                                            <div class="track-msg">"<%= t.instruction %>"</div>
+                                        </div>
+                                    </li>
+                                <% }) %>
+                            <% } else { %>
+                                <div style="text-align:center; font-size:12px; color:#94a3b8; padding:20px;">
+                                    Belum ada riwayat disposisi.
+                                </div>
+                            <% } %>
+                        </ul>
+                    </div>
+
+                </div>
+
+                <div class="right-panel">
+                    <% 
+                        let fileUrl = '';
+                        try {
+                            if(letter.origin_type === 'EXTERNAL') {
+                                fileUrl = `/download-surat/${letter.id}`; 
+                            } else {
+                                const c = JSON.parse(letter.content_data);
+                                fileUrl = c.file_url;
+                            }
+                        } catch(e) {}
+                    %>
+
+                    <% if (letter.origin_type === 'EXTERNAL') { %>
+                         <iframe src="/download-surat/<%= letter.id %>" width="100%" height="100%" style="border:none; min-height: 800px; background: white;"></iframe>
+                    <% } else if (fileUrl) { %>
+                        <iframe src="<%= fileUrl %>" width="100%" height="100%" style="border:none; min-height: 800px; background: white;"></iframe>
+                    <% } else { %>
+                        <div class="preview-paper">
+                            <div style="text-align:center; padding-top:100px; color:#94a3b8;">
+                                <i class="fas fa-file-alt" style="font-size:50px; margin-bottom:20px;"></i><br>
+                                Tidak ada preview PDF tersedia.
+                            </div>
+                        </div>
+                    <% } %>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <div id="modalReject" class="modal">
+        <div class="modal-content">
+            <h3 style="margin-top:0;">Tolak Dokumen</h3>
+            <p style="font-size:13px; color:#64748b;">Berikan alasan penolakan:</p>
+            <textarea id="alasanTolak" class="form-control" rows="3"></textarea>
+            <div style="display:flex; justify-content:flex-end; gap:10px;">
+                <button onclick="document.getElementById('modalReject').style.display='none'" class="btn-block" style="background:#e2e8f0; color:#333; width:auto;">Batal</button>
+                <button onclick="rejectDetail(<%= letter.id %>)" class="btn-block btn-reject" style="width:auto;">Kirim</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modalDisposition" class="modal">
+        <div class="modal-content">
+            <h3 style="margin-top:0;">Kirim Disposisi</h3>
+            
+            <form id="formDisposisi">
+                <label style="font-size:12px; font-weight:bold;">Pilih Staff:</label>
+                <select name="receiver_id" id="dispReceiver" class="form-control">
+                    <option value="">-- Memuat Data... --</option>
+                </select>
+    
+                <label style="font-size:12px; font-weight:bold;">Instruksi:</label>
+                <textarea name="instruction" id="dispInstruksi" class="form-control" rows="3" placeholder="Contoh: Segera tindak lanjuti..."></textarea>
+    
+                <div style="display:flex; justify-content:flex-end; gap:10px;">
+                    <button type="button" onclick="document.getElementById('modalDisposition').style.display='none'" class="btn-block" style="background:#e2e8f0; color:#333; width:auto;">Batal</button>
+                    <button type="submit" class="btn-block btn-disposition" style="width:auto;">Kirim Perintah</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. APPROVE & REJECT (Untuk Surat Internal) ---
+        async function approveDetail(id) {
+            Swal.fire({
+                title: 'Setujui Dokumen?',
+                text: "Dokumen ini akan diteruskan.",
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#166534',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Ya, Setujui'
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    try {
+                        const res = await fetch(`/api/letters/${id}/approve`, { method: 'POST' });
+                        if(res.ok) { 
+                            Swal.fire('Disetujui!', 'Dokumen telah disetujui.', 'success').then(() => location.reload()); 
+                        }
+                    } catch(e) { 
+                        Swal.fire('Error', 'Gagal koneksi server', 'error'); 
+                    }
+                }
+            })
+        }
+
+        async function rejectDetail(id) {
+            const reason = document.getElementById('alasanTolak').value;
+            if(!reason) return Swal.fire('Gagal', 'Mohon isi alasan penolakan.', 'warning');
+            
+            try {
+                const res = await fetch(`/api/letters/${id}/reject`, {
+                    method: 'POST', headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({reason})
+                });
+                if(res.ok) { 
+                    Swal.fire('Ditolak!', 'Dokumen telah ditolak.', 'error').then(() => location.href='/pimpinan/history'); 
+                }
+            } catch(e) { Swal.fire('Error', 'Gagal koneksi server', 'error'); }
+        }
+
+        function openModalReject() { document.getElementById('modalReject').style.display = 'flex'; }
+
+        // --- 2. DISPOSISI (Untuk Surat Masuk) ---
+        function openDispositionModal() {
+            document.getElementById('modalDisposition').style.display = 'flex';
+            loadStaffList();
+        }
+
+        async function loadStaffList() {
+            const select = document.getElementById('dispReceiver');
+            if(select.options.length > 1) return; // Cek jika data sudah dimuat
+
+            try {
+                // Mengambil daftar user dengan role 'staff'
+                const res = await fetch('/api/users?role=staff'); 
+                const data = await res.json();
+                
+                select.innerHTML = '<option value="">-- Pilih Staff --</option>';
+                data.forEach(s => {
+                    const opt = document.createElement('option');
+                    opt.value = s.id;
+                    opt.textContent = s.full_name;
+                    select.appendChild(opt);
+                });
+            } catch(e) { console.error(e); }
+        }
+
+        // --- HANDLER KIRIM DISPOSISI (SWEETALERT PREMIUM) ---
+        document.getElementById('formDisposisi').addEventListener('submit', async function(e) {
+            e.preventDefault(); 
+            
+            // Ambil data
+            const letterId = "<%= letter.id %>"; 
+            const receiverId = document.querySelector('select[name="receiver_id"]').value;
+            const instruction = document.querySelector('textarea[name="instruction"]').value;
+
+            if(!receiverId || !instruction) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Data Belum Lengkap',
+                    text: 'Harap pilih staff dan isi instruksi!',
+                    confirmButtonColor: '#f59e0b'
+                });
+                return;
+            }
+
+            // Loading
+            Swal.fire({
+                title: 'Mengirim Perintah...',
+                html: 'Sedang memproses disposisi ke staff.',
+                allowOutsideClick: false,
+                didOpen: () => { Swal.showLoading(); }
+            });
+
+            try {
+                const res = await fetch('/api/dispositions/create', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        letter_id: letterId, 
+                        receiver_id: receiverId, 
+                        instruction: instruction 
+                    })
+                });
+
+                const result = await res.json();
+
+                if(res.ok) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Disposisi Terkirim!',
+                        text: `Tugas berhasil diberikan kepada staff.`,
+                        confirmButtonText: 'Selesai',
+                        confirmButtonColor: '#002BE8',
+                        backdrop: `rgba(15, 23, 42, 0.6) blur(8px)`
+                    }).then(() => {
+                        location.reload(); 
+                    });
+                } else {
+                    Swal.fire('Gagal', result.message || 'Terjadi kesalahan.', 'error');
+                }
+
+            } catch (error) {
+                console.error(error);
+                Swal.fire('Error', 'Gagal menghubungi server.', 'error');
+            }
+        });
+    </script>
+</body>
+</html>

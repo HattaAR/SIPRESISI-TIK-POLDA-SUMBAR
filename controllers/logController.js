@@ -1,9 +1,8 @@
-// controllers/logController.js
 const db = require('../config/database');
 
 exports.getLogs = async (req, res) => {
     try {
-        // Kita join dengan tabel users agar tahu siapa pelakunya
+       
         const query = `
             SELECT l.*, u.full_name, u.role 
             FROM activity_logs l

@@ -1,4 +1,4 @@
-// controllers/authController.js
+
 const db = require('../config/database');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
@@ -28,16 +28,15 @@ exports.login = async (req, res) => {
             { expiresIn: '1d' }
         );
 
-        // ============================================================
-        // [BARU] 4. CATAT LOG AKTIVITAS (CCTV)
-        // ============================================================
+        
+        // 4. CATAT LOG AKTIVITAS (CCTV)
+        
         const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
         await db.query(
             'INSERT INTO activity_logs (user_id, action, description, ip_address) VALUES (?, ?, ?, ?)',
             [user.id, 'LOGIN', `User ${user.username} berhasil login`, ip]
         );
-        // ============================================================
-
+        
         res.json({
             message: 'Login Berhasil',
             token,

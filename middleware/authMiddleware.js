@@ -1,10 +1,9 @@
-// middleware/authMiddleware.js
 const jwt = require('jsonwebtoken');
 
 module.exports = (req, res, next) => {
     // 1. Ambil token dari Header (Format: "Bearer <token>")
     const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1]; // Ambil bagian tokennya saja
+    const token = authHeader && authHeader.split(' ')[1]; 
 
     // 2. Jika tidak ada token, tolak akses
     if (!token) {
@@ -19,6 +18,6 @@ module.exports = (req, res, next) => {
         
         // 4. Jika valid, simpan data user ke request agar bisa dipakai di controller
         req.user = user;
-        next(); // Lanjut ke proses berikutnya
+        next(); 
     });
 };

@@ -78,7 +78,7 @@ exports.deleteType = async (req, res) => {
 // 4. Update Schema Form (INI YANG TADI MENYEBABKAN CRASH KARENA HILANG)
 exports.updateSchema = async (req, res) => {
     const { id } = req.params;
-    const { schema } = req.body; // String JSON
+    const { schema } = req.body; 
     
     try {
         await db.query("UPDATE letter_types SET form_schema = ? WHERE id = ?", [schema, id]);

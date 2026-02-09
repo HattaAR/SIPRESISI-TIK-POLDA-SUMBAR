@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body>
+
+    <div class="dashboard-container">
+        <%- include('../partials/sidebar') %>
+
+        <main class="main-content">
+            <%- include('../partials/header') %>
+
+            <div class="form-card">
+                <div class="form-section-title">
+                    <div style="background: #eff6ff; padding: 8px; border-radius: 8px;">
+                        <i class="fas fa-file-import" style="color: #002BE8; font-size: 20px;"></i>
+                    </div>
+                    <span>Formulir Data Surat Masuk</span>
+                </div>
+
+                <form id="formIncoming" enctype="multipart/form-data">
+                    <div class="form-grid">
+                        
+                        <div>
+                            <div class="form-group">
+                                <label class="form-label">Pengirim (Instansi Luar)</label>
+                                <div class="input-wrapper">
+                                    
+                                    <input type="text" name="external_sender" class="form-input" placeholder="Contoh: Polres Bukittinggi..." required>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Nomor Surat (Asli)</label>
+                                <div class="input-wrapper">
+                                    
+                                    <input type="text" name="letter_number" class="form-input" placeholder="Nomor surat asli..." required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="form-group">
+                                <label class="form-label">Tanggal Surat</label>
+                                <div class="input-wrapper">
+                                    
+                                    <input type="date" name="letter_date" class="form-input" required>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Tujuan Pimpinan</label>
+                                <div class="input-wrapper"> 
+                                    <select name="recipient" class="form-input" required style="cursor: pointer;">
+                                        <option value="" disabled selected>-- Pilih Pimpinan --</option>
+                                        <% if (leaders && leaders.length > 0) { %>
+                                            <% leaders.forEach(pimpinan => { %>
+                                                <option value="<%= pimpinan.full_name %>"><%= pimpinan.full_name %></option>
+                                            <% }) %>
+                                        <% } else { %>
+                                            <option value="Kabid TIK">Kabid TIK</option>
+                                        <% } %>
+                                    </select>
+                                    <i  style="position:absolute; right:15px; top:50%; transform:translateY(-50%); color:#94a3b8; pointer-events:none;"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="grid-column: 1 / -1;" class="grid-span-mobile">
+                            <label class="form-label">Perihal Surat</label>
+                            <div class="input-wrapper">
+                                <input type="text" name="subject" class="form-input" placeholder="Isi perihal surat..." required>
+                            </div>
+                        </div>
+
+                        <div style="grid-column: 1 / -1;" class="grid-span-mobile">
+                            <label class="form-label" style="font-size: 14px; margin-bottom: 12px;">Upload File Scan (PDF)</label>
+                            
+                            <div class="file-upload-wrapper">
+                                <i class="fas fa-file-pdf" style="font-size: 48px; color: #94a3b8; margin-bottom: 15px;"></i>
+                                
+                                <div id="fileName" style="font-size: 16px; font-weight: 600; color: #334155;">
+                                    Klik area ini untuk memilih file PDF
+                                </div>
+                                
+                                <div style="font-size: 13px; color: #94a3b8; margin-top: 5px; background: #e2e8f0; padding: 4px 12px; border-radius: 20px;">
+                                    <i class="fas fa-info-circle"></i> Maksimal 10 MB
+                                </div>
+
+                                <input type="file" name="file_scan" id="fileInput" accept="application/pdf" required onchange="showFileName(this)">
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <button type="submit" class="btn-save">
+                        <i class="fas fa-cloud-upload-alt"></i> SIMPAN SURAT MASUK
+                    </button>
+                </form>
+            </div>
+
+            <div style="height: 50px;"></div>
+        </main>
+    </div>
+
+    <script>
+        function showFileName(input) {
+            const fileNameDisplay = document.getElementById('fileName');
+            const icon = document.querySelector('.file-upload-wrapper i'); // Ambil icon
+            
+            if (input.files && input.files[0]) {
+                // Jika file dipilih, ubah teks dan warna icon
+                fileNameDisplay.innerHTML = `<span style="color:#002BE8; font-weight:700;">${input.files[0].name}</span>`;
+                icon.style.color = "#e11d48"; // Merah PDF
+                icon.className = "fas fa-file-pdf"; 
+            } else {
+                fileNameDisplay.innerText = "Klik area ini untuk memilih file PDF";
+                icon.style.color = "#94a3b8"; // Abu-abu
+            }
+        }
+
+        // --- HANDLER SUBMIT ---
+        document.getElementById('formIncoming').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            
+            Swal.fire({
+                title: 'Mengupload...',
+                html: 'Mohon tunggu, sedang menyimpan data.',
+                allowOutsideClick: false,
+                didOpen: () => { Swal.showLoading(); }
+            });
+            
+            try {
+                const res = await fetch('/api/letters/incoming', { method: 'POST', body: formData });
+                const result = await res.json();
+
+                if(res.ok) { 
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Berhasil!',
+                        text: result.message,
+                        confirmButtonText: 'Selesai'
+                    }).then(() => { window.location.reload(); });
+                } else {
+                    Swal.fire('Gagal', result.message || "Error", 'error');
+                }
+            } catch (error) {
+                Swal.fire('Error', 'Gagal koneksi server.', 'error');
+            }
+        });
+        
+        function logout() { 
+            Swal.fire({
+                title: 'Keluar?', text: "Akhiri sesi ini?", icon: 'question',
+                showCancelButton: true, confirmButtonText: 'Ya', cancelButtonText: 'Batal', confirmButtonColor: '#ef4444'
+            }).then((res) => { if (res.isConfirmed) window.location.href = '/logout'; });
+        }
+    </script>
+</body>
+</html>

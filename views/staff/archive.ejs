@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body>
+
+    <div class="dashboard-container">
+        <%- include('../partials/sidebar') %>
+
+        <main class="main-content">
+            <%- include('../partials/header') %>
+
+            <div class="content-card">
+                
+
+                <form method="GET" action="/staff/archive" style="background: #f8fafc; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: flex; gap: 10px;">
+                    <div style="flex: 1;">
+                        <input type="text" name="search" class="form-input" placeholder="Cari Nomor atau Perihal..." value="<%= search || '' %>" style="width: 100%; margin:0;">
+                    </div>
+                    <button type="submit" class="btn-submit" style="width: auto; padding: 0 25px; margin:0;">
+                        Cari
+                    </button>
+                    <% if(search) { %>
+                        <a href="/staff/archive" class="btn-submit" style="background: #94a3b8; width: auto; padding: 10px 15px; text-decoration: none; display: flex; align-items: center; margin:0;">
+                            <i class="fas fa-times"></i>
+                        </a>
+                    <% } %>
+                </form>
+
+                <div class="table-responsive">
+                    <table class="custom-table">
+                        <thead>
+                            <tr>
+                                <th>Tanggal</th>
+                                <th>Jenis</th>
+                                <th>Nomor / Asal</th>
+                                <th>Perihal</th>
+                                <th>Status</th>
+                                <th style="text-align: center;">File</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% if (letters.length > 0) { %>
+                                <% letters.forEach(item => { %>
+                                    <tr>
+                                        <td style="color: #64748b; font-size: 13px;">
+                                            <%= new Date(item.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) %>
+                                        </td>
+
+                                        <td>
+                                            <% if(item.origin_type === 'EXTERNAL') { %>
+                                                <span style="background: #fff1f2; color: #e11d48; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; border: 1px solid #fda4af;">
+                                                    <i class="fas fa-arrow-down"></i> MASUK
+                                                </span>
+                                            <% } else { %>
+                                                <span style="background: #eff6ff; color: #2563eb; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; border: 1px solid #bfdbfe;">
+                                                    <i class="fas fa-arrow-up"></i> KELUAR
+                                                </span>
+                                            <% } %>
+                                        </td>
+
+                                        <td>
+                                            <div style="font-weight: 700; color: #002BE8;">
+                                                <%= item.letter_number || 'DRAFT' %>
+                                            </div>
+                                            <div style="font-size: 12px; color: #64748b;">
+                                                <%= item.type_name || 'Surat Umum' %>
+                                            </div>
+                                        </td>
+
+                                        <td style="max-width: 300px; line-height: 1.4;">
+                                            <%= item.subject %>
+                                        </td>
+
+                                        <td>
+                                            <% 
+                                                let statusColor = '#94a3b8'; // Default Gray
+                                                let statusBg = '#f1f5f9';
+                                                let icon = 'fa-circle';
+                                                const st = (item.status || '').toUpperCase();
+
+                                                if(st === 'APPROVED') { statusColor = '#166534'; statusBg='#dcfce7'; icon='fa-check-circle'; }
+                                                else if(st === 'REJECTED') { statusColor = '#991b1b'; statusBg='#fee2e2'; icon='fa-times-circle'; }
+                                                else if(st === 'PENDING') { statusColor = '#854d0e'; statusBg='#fef9c3'; icon='fa-clock'; }
+                                                else if(st === 'DRAFT') { statusColor = '#1e293b'; statusBg='#e2e8f0'; icon='fa-file-alt'; }
+                                            %>
+                                            <span style="background: <%= statusBg %>; color: <%= statusColor %>; padding: 5px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; gap: 5px;">
+                                                <i class="fas <%= icon %>"></i> <%= st %>
+                                            </span>
+                                        </td>
+
+                                        <td style="text-align: center;">
+                                            <% if (st === 'APPROVED' || st === 'COMPLETED') { %>
+                                                <a href="/download-surat/<%= item.id %>" target="_blank" title="Download Surat" 
+                                                   style="display: inline-flex; width: 32px; height: 32px; align-items: center; justify-content: center; background: #dcfce7; color: #166534; border-radius: 50%; text-decoration: none; transition: 0.2s;">
+                                                    <i class="fas fa-download"></i>
+                                                </a>
+                                            <% } else { %>
+                                                <span style="color: #cbd5e1; font-size: 18px;" title="Belum Tersedia">
+                                                    <i class="fas fa-file-excel"></i>
+                                                </span>
+                                            <% } %>
+                                        </td>
+                                    </tr>
+                                <% }) %>
+                            <% } else { %>
+                                <tr>
+                                    <td colspan="6" style="text-align: center; padding: 40px; color: #94a3b8;">
+                                        <i class="fas fa-folder-open" style="font-size: 40px; margin-bottom: 10px; opacity: 0.5;"></i>
+                                        <br>Tidak ada data surat ditemukan.
+                                    </td>
+                                </tr>
+                            <% } %>
+                        </tbody>
+                    </table>
+                </div>
+
+                <% if (totalPages > 1) { %>
+                    <div style="display: flex; justify-content: center; gap: 5px; margin-top: 20px;">
+                        <% if (currentPage > 1) { %>
+                            <a href="/staff/archive?page=<%= currentPage - 1 %>&search=<%= search %>" class="btn-submit" style="width: auto; padding: 8px 12px; background: #fff; color: #002BE8; border: 1px solid #002BE8;">&laquo;</a>
+                        <% } %>
+
+                        <span style="padding: 8px 12px; background: #002BE8; color: #fff; border-radius: 4px; font-size: 13px; font-weight: 600;">
+                            Halaman <%= currentPage %> dari <%= totalPages %>
+                        </span>
+
+                        <% if (currentPage < totalPages) { %>
+                            <a href="/staff/archive?page=<%= currentPage + 1 %>&search=<%= search %>" class="btn-submit" style="width: auto; padding: 8px 12px; background: #fff; color: #002BE8; border: 1px solid #002BE8;">&raquo;</a>
+                        <% } %>
+                    </div>
+                <% } %>
+
+            </div>
+        </main>
+    </div>
+
+    <script>
+        function logout() {
+            Swal.fire({
+                title: 'Keluar?',
+                text: "Akhiri sesi ini?",
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Logout',
+                confirmButtonColor: '#ef4444',
+                cancelButtonText: 'Batal'
+            }).then((res) => { 
+                if (res.isConfirmed) {
+                    window.location.href = '/logout';
+                }
+            });
+        }
+    </script>
+</body>
+</html>

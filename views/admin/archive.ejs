@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.19.3/package/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+
+    <div class="dashboard-container">
+        <%- include('../partials/sidebar') %>
+
+        <main class="main-content">
+            <%- include('../partials/header') %>
+
+           
+
+            <div class="toolbar">
+                <form action="/staff/archive" method="GET" class="search-wrapper">
+                    <i class="fas fa-search"></i>
+                    <input type="text" name="search" placeholder="Cari Nomor / Perihal..." value="<%= typeof search !== 'undefined' ? search : '' %>">
+                </form>
+
+                <button onclick="exportToExcel()" class="btn-excel">
+                    <i class="fas fa-file-excel"></i> Export Excel
+                </button>
+            </div>
+
+            <div class="archive-container">
+                
+                <div class="archive-header">
+                    <div>TANGGAL</div>
+                    <div>NOMOR SURAT</div>
+                    <div>JENIS / ASAL</div>
+                    <div>PERIHAL</div>
+                    <div>PENGINPUT</div>
+                    <div style="text-align:center;">FILE</div>
+                </div>
+
+                <div class="archive-list">
+                    <% if (letters && letters.length > 0) { %>
+                        <% letters.forEach(item => { %>
+                            <div class="archive-item">
+                                
+                                <div>
+                                    <span class="mobile-label">Tanggal</span>
+                                    <div class="arc-date-main">
+                                        <%= new Date(item.created_at).toLocaleDateString('id-ID', {day: 'numeric', month: 'short', year: 'numeric'}) %>
+                                    </div>
+                                    <div class="arc-date-sub">
+                                        <%= new Date(item.created_at).toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'}) %> WIB
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <span class="mobile-label">Nomor Surat</span>
+                                    <span class="arc-link" style="color: #002BE8; font-weight:700;">
+                                        <%= item.letter_number || 'DRAFT' %>
+                                    </span>
+                                </div>
+
+                                <div>
+                                    <span class="mobile-label">Jenis / Asal</span>
+                                    <% if(item.origin_type === 'EXTERNAL') { %>
+                                        <span class="arc-badge badge-in"><i class="fas fa-arrow-down"></i> MASUK</span>
+                                        <div class="arc-type-sub"><%= item.external_sender || 'Eksternal' %></div>
+                                    <% } else { %>
+                                        <span class="arc-badge badge-out"><i class="fas fa-arrow-up"></i> KELUAR</span>
+                                        <div class="arc-type-sub"><%= item.type_name || 'Surat Keluar' %></div>
+                                    <% } %>
+                                </div>
+
+                                <div>
+                                    <span class="mobile-label">Perihal</span>
+                                    <div class="arc-subject"><%= item.subject %></div>
+                                </div>
+
+                                <div>
+                                    <span class="mobile-label">Penginput</span>
+                                    <div class="arc-user">
+                                        <i class="fas fa-user-circle"></i>
+                                        <span style="font-weight:500;"><%= item.pengirim || user.full_name %></span>
+                                    </div>
+                                </div>
+
+                                <div style="text-align:center;" class="arc-action">
+                                    <% 
+                                        let downloadUrl = '#';
+                                        let iconClass = 'fa-file-word'; // Default icon Word
+                                        let showIcon = false;
+                                        
+                                        // LOGIKA BARU:
+                                        if (item.origin_type === 'EXTERNAL') {
+                                            // -- SURAT MASUK (EKSTERNAL) --
+                                            // Hanya muncul jika ada file yang diupload (JSON file_url)
+                                            try {
+                                                const c = JSON.parse(item.content_data || '{}');
+                                                if(c.file_url) { 
+                                                    downloadUrl = c.file_url; 
+                                                    showIcon = true; 
+                                                    iconClass = 'fa-file-pdf'; // Biasanya PDF
+                                                }
+                                            } catch(e){}
+
+                                        } else {
+                                            // -- SURAT KELUAR (INTERNAL) --
+                                            // SELALU MUNCUL ICON HIJAU (Untuk Preview/Download Draft)
+                                            // Tidak peduli statusnya Draft/Approved, arahkan ke generator route
+                                            downloadUrl = `/download-surat/${item.id}`;
+                                            showIcon = true;
+                                            iconClass = 'fa-file-word'; // Icon Word Hijau
+                                        }
+                                    %>
+
+                                    <% if (showIcon) { %>
+                                        <a href="<%= downloadUrl %>" target="_blank" class="btn-icon-file" title="Lihat Dokumen">
+                                            <i class="fas <%= iconClass %>"></i>
+                                        </a>
+                                    <% } else { %>
+                                        <span class="btn-icon-disabled">
+                                            <i class="fas fa-minus"></i>
+                                        </span>
+                                    <% } %>
+                                </div>
+
+                            </div>
+                        <% }) %>
+                    <% } else { %>
+                        <div style="padding:50px; text-align:center; color:#94a3b8;">
+                            <i class="fas fa-inbox" style="font-size:40px; margin-bottom:15px; opacity:0.3;"></i><br>
+                            Data arsip tidak ditemukan.
+                        </div>
+                    <% } %>
+                </div>
+
+                <% if (typeof totalPages !== 'undefined' && totalPages > 1) { %>
+                    <div class="pagination-container">
+                        <div style="font-size: 12px; color: #64748b;">
+                            Menampilkan hal <b><%= currentPage %></b> dari <b><%= totalPages %></b>
+                        </div>
+                        <div style="display: flex; gap: 5px;">
+                            <% if (currentPage > 1) { %>
+                                <a href="?page=<%= currentPage - 1 %>&search=<%= typeof search !== 'undefined' ? search : '' %>" class="btn-page">
+                                    <i class="fas fa-chevron-left"></i>
+                                </a>
+                            <% } %>
+
+                            <% for(let i = 1; i <= totalPages; i++) { %>
+                                <a href="?page=<%= i %>&search=<%= typeof search !== 'undefined' ? search : '' %>" class="btn-page <%= currentPage == i ? 'active' : '' %>">
+                                    <%= i %>
+                                </a>
+                            <% } %>
+
+                            <% if (currentPage < totalPages) { %>
+                                <a href="?page=<%= currentPage + 1 %>&search=<%= typeof search !== 'undefined' ? search : '' %>" class="btn-page">
+                                    <i class="fas fa-chevron-right"></i>
+                                </a>
+                            <% } %>
+                        </div>
+                    </div>
+                <% } %>
+            </div>
+            
+            <div style="height: 50px;"></div>
+        </main>
+    </div>
+
+    <script>
+        // LOGOUT SWEETALERT
+        function logout() {
+            Swal.fire({
+                title: 'Keluar Aplikasi?',
+                text: "Sesi Anda akan diakhiri.",
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444',
+                cancelButtonColor: '#64748b',
+                confirmButtonText: 'Ya, Logout',
+                cancelButtonText: 'Batal'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = '/logout';
+                }
+            });
+        }
+
+        // EXPORT EXCEL
+        function exportToExcel() {
+            let items = document.querySelectorAll(".archive-item");
+            if(items.length === 0) {
+                Swal.fire('Info', 'Tidak ada data untuk diexport.', 'info');
+                return;
+            }
+
+            let data = [];
+            data.push(["Tanggal", "Jam", "Nomor Surat", "Jenis", "Asal/Keterangan", "Perihal", "Penginput"]);
+
+            items.forEach(item => {
+                let tanggal = item.querySelector(".arc-date-main")?.innerText || "";
+                let jam = item.querySelector(".arc-date-sub")?.innerText || "";
+                let nomor = item.querySelector(".arc-link")?.innerText || "";
+                let jenis = item.querySelector(".arc-badge")?.innerText || "";
+                let asal = item.querySelector(".arc-type-sub")?.innerText || "";
+                let perihal = item.querySelector(".arc-subject")?.innerText || "";
+                let penginput = item.querySelector(".arc-user span")?.innerText || "";
+
+                data.push([tanggal, jam, nomor, jenis, asal, perihal, penginput]);
+            });
+
+            let ws = XLSX.utils.aoa_to_sheet(data);
+            let wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Arsip Surat");
+            XLSX.writeFile(wb, `Arsip_Surat.xlsx`);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    
+    <link rel="stylesheet" href="/css/style.css">
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body>
+
+    <div class="dashboard-container">
+        <%- include('../partials/sidebar') %>
+        <main class="main-content">
+            <%- include('../partials/header') %>
+
+            <div class="create-card">
+                <h3 class="card-title">
+                    <i class="fas fa-pen-nib" style="color: #002BE8;"></i> 
+                    <%= isEdit ? 'Perbaiki Surat' : 'Buat Surat Baru' %>
+                </h3>
+                <p class="card-subtitle">
+                    <%= isEdit ? 'Silakan edit data di bawah untuk memperbaiki surat yang ditolak.' : 'Lengkapi formulir di bawah untuk membuat draft surat resmi.' %>
+                </p>
+
+                <% if(isEdit) { %>
+                    <div class="alert-edit">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <div>
+                            <strong>Mode Perbaikan (Revisi)</strong><br>
+                            Anda sedang mengedit surat yang dikembalikan. Pastikan memperbaiki bagian yang diminta pimpinan.
+                        </div>
+                    </div>
+                <% } %>
+
+                <form id="createLetterForm">
+                    
+                    <% if(isEdit) { %>
+                        <input type="hidden" id="letterId" value="<%= letter.id %>">
+                    <% } %>
+
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="jenisSurat">1. Pilih Jenis Surat</label>
+                            <select id="jenisSurat" class="form-control-modern" onchange="loadFormSchema()" <%= isEdit ? 'disabled' : '' %>>
+                                <option value="" disabled <%= !isEdit ? 'selected' : '' %>>-- Klik untuk memilih --</option>
+                                
+                                <% if (typeof types !== 'undefined' && types.length > 0) { %>
+                                    <% types.forEach(t => { %>
+                                        <option value="<%= t.id %>" 
+                                            <%= (isEdit && letter.type_id == t.id) ? 'selected' : '' %>>
+                                            [<%= t.code_prefix %>] - <%= t.name %>
+                                        </option>
+                                    <% }) %>
+                                <% } %>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="perihalSurat">2. Perihal / Judul Surat</label>
+                            <input type="text" id="perihalSurat" class="form-control-modern" 
+                                   placeholder="Contoh: Laporan Kegiatan Bulanan" 
+                                   value="<%= isEdit ? letter.subject : '' %>">
+                        </div>
+                    </div>
+
+                    <div id="dynamicFormContainer" class="dynamic-area">
+                        <i class="fas fa-file-invoice empty-state-icon"></i>
+                        <p class="empty-state-text">Silakan pilih <b>Jenis Surat</b> terlebih dahulu<br>untuk memunculkan formulir isian.</p>
+                    </div>
+
+                    <div class="btn-action-group">
+                        <% if(!isEdit) { %>
+                            <button type="button" onclick="resetForm()" class="btn-submit" style="background: #e2e8f0; color: #4a5568; box-shadow:none;">
+                                <i class="fas fa-undo"></i> Reset
+                            </button>
+                        <% } else { %>
+                            <a href="/staff/dashboard" class="btn-submit" style="background: #e2e8f0; color: #4a5568; box-shadow:none; text-decoration:none;">
+                                <i class="fas fa-arrow-left"></i> Batal
+                            </a>
+                        <% } %>
+
+                        <button type="submit" id="btnSave" class="btn-submit" disabled>
+                            <i class="fas fa-save"></i> <%= isEdit ? 'SIMPAN PERBAIKAN' : 'SIMPAN DRAFT' %>
+                        </button>
+                    </div>
+
+                </form>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // 1. DATA DARI SERVER
+        const allTypes = <%- JSON.stringify(types || []) %>;
+        const isEditMode = <%= isEdit %>;
+        const oldContent = <%- (isEdit && content) ? JSON.stringify(content) : 'null' %>;
+
+        // 2. RENDER FORM DINAMIS
+        function loadFormSchema() {
+            const select = document.getElementById('jenisSurat');
+            const container = document.getElementById('dynamicFormContainer');
+            const btnSave = document.getElementById('btnSave');
+            
+            const selectedId = select.value;
+            const selectedType = allTypes.find(t => t.id == selectedId);
+
+            if (!selectedType) return;
+
+            btnSave.disabled = false;
+            
+            container.style.background = "#fff";
+            container.style.border = "none";
+            container.style.textAlign = "left";
+            container.style.padding = "0";
+            
+            let schema = [];
+            try {
+                let raw = selectedType.form_schema;
+                if (typeof raw === 'string') raw = JSON.parse(raw);
+                if (typeof raw === 'string') raw = JSON.parse(raw);
+                schema = Array.isArray(raw) ? raw : [];
+            } catch (e) { schema = []; }
+
+            let html = '<h4 style="margin-bottom:15px; font-size:16px; color:#2d3748; border-bottom:1px solid #eee; padding-bottom:10px;">3. Isi Detail Surat</h4>';
+            
+            if (!schema || schema.length === 0) {
+                html += '<p style="color:#e53e3e;">⚠️ Admin belum mengatur formulir untuk jenis surat ini.</p>';
+            } else {
+                html += '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">';
+                
+                schema.forEach(field => {
+                    let inputHtml = '';
+                    let value = '';
+                    if (isEditMode && oldContent && oldContent[field.key]) {
+                        value = oldContent[field.key];
+                    }
+
+                    if (field.type === 'textarea') {
+                        inputHtml = `<textarea name="${field.key}" class="form-control-modern" rows="3">${value}</textarea>`;
+                    } else if (field.type === 'date') {
+                        inputHtml = `<input type="date" name="${field.key}" class="form-control-modern" value="${value}">`;
+                    } else {
+                        inputHtml = `<input type="text" name="${field.key}" class="form-control-modern" value="${value}">`;
+                    }
+
+                    const gridSpan = field.type === 'textarea' ? 'grid-column: span 2;' : '';
+
+                    html += `
+                        <div style="${gridSpan}">
+                            <label style="display:block; font-size:13px; font-weight:600; color:#4a5568; margin-bottom:5px;">${field.label}</label>
+                            ${inputHtml}
+                        </div>
+                    `;
+                });
+                html += '</div>';
+            }
+            container.innerHTML = html;
+        }
+
+        if (isEditMode) {
+            document.addEventListener("DOMContentLoaded", function() {
+                loadFormSchema();
+            });
+        }
+
+        // 3. HANDLER SIMPAN (SWEETALERT UPDATE)
+        document.getElementById('createLetterForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const btn = document.getElementById('btnSave');
+            const formData = new FormData(this);
+            const data = Object.fromEntries(formData.entries());
+
+            data.type_id = document.getElementById('jenisSurat').value;
+            data.subject = document.getElementById('perihalSurat').value;
+
+            if(isEditMode) {
+                data.id = document.getElementById('letterId').value;
+            }
+
+            if(!data.type_id || !data.subject) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Data Belum Lengkap',
+                    text: 'Harap pilih jenis surat dan isi perihal!',
+                    confirmButtonColor: '#f59e0b'
+                });
+                return;
+            }
+
+            Swal.fire({
+                title: 'Menyimpan...',
+                html: 'Sedang memproses data surat.',
+                allowOutsideClick: false,
+                didOpen: () => { Swal.showLoading(); }
+            });
+
+            try {
+                // Tentukan URL Endpoint Backend
+                // Asumsi: '/api/letters' untuk Create Baru, '/api/letters/update' untuk Update/Edit
+                // Jika backend hanya pakai '/api/letters' (POST) untuk create, sesuaikan disini.
+                const targetUrl = isEditMode ? '/api/letters/update' : '/api/letters'; 
+                
+                const res = await fetch(targetUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await res.json();
+
+                if(res.ok) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Berhasil Disimpan!',
+                        text: result.message || 'Draft surat telah tersimpan.',
+                        showCancelButton: true,
+                        confirmButtonText: 'Lihat Draft',
+                        cancelButtonText: 'Buat Baru',
+                        confirmButtonColor: '#002BE8',
+                        cancelButtonColor: '#64748b'
+                    }).then((r) => {
+                        if (r.isConfirmed) {
+                            // --- FIX DISINI: Arahkan ke Dashboard ---
+                            window.location.href = '/staff/dashboard'; 
+                        } else {
+                            if(!isEditMode) {
+                                resetForm(); // Reset jika mode create
+                            } else {
+                                window.location.href = '/staff/dashboard'; // Jika edit, kembali ke dashboard
+                            }
+                        }
+                    });
+                } else {
+                    throw new Error(result.message);
+                }
+
+            } catch (err) {
+                console.error(err);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Gagal',
+                    text: err.message || 'Terjadi kesalahan pada server.',
+                    confirmButtonColor: '#ef4444'
+                });
+            }
+        });
+
+        // 4. RESET FORM
+        function resetForm() {
+            Swal.fire({
+                title: 'Reset Formulir?',
+                text: "Semua isian akan dihapus.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Ya, Reset',
+                confirmButtonColor: '#ef4444',
+                cancelButtonText: 'Batal'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    document.getElementById('createLetterForm').reset();
+                    const container = document.getElementById('dynamicFormContainer');
+                    container.innerHTML = `
+                        <i class="fas fa-file-invoice empty-state-icon"></i>
+                        <p class="empty-state-text">Silakan pilih <b>Jenis Surat</b> terlebih dahulu<br>untuk memunculkan formulir isian.</p>
+                    `;
+                    container.style = ""; 
+                    document.getElementById('btnSave').disabled = true;
+                }
+            });
+        }
+
+        // 5. LOGOUT
+        function logout() { 
+            Swal.fire({
+                title: 'Keluar?',
+                text: "Akhiri sesi ini?",
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Logout',
+                confirmButtonColor: '#ef4444',
+                cancelButtonText: 'Batal'
+            }).then((res) => { if (res.isConfirmed) window.location.href = '/logout'; });
+        }
+    </script>
+</body>
+</html>
