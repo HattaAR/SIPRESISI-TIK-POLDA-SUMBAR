@@ -8,57 +8,6 @@
     <link rel="stylesheet" href="/css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
-    <style>
-        /* Layout Grid Detail */
-        .detail-grid {
-            display: grid;
-            grid-template-columns: 350px 1fr; /* Kiri: Info, Kanan: Preview */
-            gap: 25px;
-            align-items: start;
-        }
-
-        /* Info Card (Kiri) */
-        .info-card {
-            background: white; border-radius: 12px;
-            padding: 25px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.03);
-            border: 1px solid #f1f5f9;
-        }
-
-        .info-label { font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-bottom: 5px; }
-        .info-value { font-size: 14px; color: #1e293b; font-weight: 500; margin-bottom: 20px; line-height: 1.5; }
-        .info-value.highlight { color: #002BE8; font-weight: 700; }
-
-        /* Preview Card (Kanan) */
-        .preview-card {
-            background: #cbd5e1; 
-            border-radius: 12px;
-            height: 800px; /* Tinggi Preview PDF */
-            overflow: hidden;
-            position: relative;
-            display: flex;
-            flex-direction: column;
-        }
-
-        /* Timeline Disposisi */
-        .timeline { margin-top: 20px; border-left: 2px solid #e2e8f0; padding-left: 20px; margin-left: 5px; }
-        .timeline-item { position: relative; margin-bottom: 20px; }
-        .timeline-item::before {
-            content: ''; position: absolute; left: -25px; top: 5px;
-            width: 10px; height: 10px; border-radius: 50%; background: #cbd5e1;
-        }
-        .timeline-item.active::before { background: #002BE8; border: 2px solid #dbeafe; }
-        
-        .t-date { font-size: 11px; color: #64748b; }
-        .t-user { font-weight: 700; font-size: 13px; color: #1e293b; }
-        .t-desc { font-size: 13px; color: #475569; margin-top: 2px; }
-
-        @media (max-width: 900px) {
-            .detail-grid { grid-template-columns: 1fr; }
-            .preview-card { height: 500px; }
-        }
-    </style>
 </head>
 <body>
 
@@ -78,134 +27,165 @@
                 
                 <% 
                     let st = (letter.status || '').toUpperCase();
-                    let badgeClass = "background:#f1f5f9; color:#64748b;";
-                    if(st === 'APPROVED') badgeClass = "background:#dcfce7; color:#166534;";
-                    else if(st === 'REJECTED') badgeClass = "background:#fee2e2; color:#991b1b;";
-                    else if(st === 'PENDING') badgeClass = "background:#fefce8; color:#eab308;";
+                    
+                    let isTaskFinished = false;
+                    if (dispositions && dispositions.length > 0) {
+                        dispositions.forEach(d => {
+                            if (d.status === 'COMPLETED') isTaskFinished = true;
+                        });
+                    }
+                    if (st === 'COMPLETED') isTaskFinished = true;
+
+                    let stStyle = "background:#f1f5f9; color:#64748b;";
+                    let stIcon = "fa-clock";
+                    let stText = "MENUNGGU";
+
+                    if(st === 'APPROVED') { 
+                        stStyle = "background:#dcfce7; color:#166534;"; stIcon = "fa-check-circle"; stText = "DISETUJUI";
+                    } else if(st === 'REJECTED') { 
+                        stStyle = "background:#fee2e2; color:#991b1b;"; stIcon = "fa-times-circle"; stText = "DITOLAK";
+                    } else if(st === 'DISPOSITION' && !isTaskFinished) { 
+                        stStyle = "background:#e0f2fe; color:#0369a1;"; stIcon = "fa-paper-plane"; stText = "TERDISPOSISI";
+                    } else if(isTaskFinished) { 
+                        stStyle = "background:#1e293b; color:#ffffff;"; stIcon = "fa-flag-checkered"; stText = "SELESAI";
+                    }
                 %>
-                <span style="<%= badgeClass %> padding: 8px 15px; border-radius: 20px; font-weight: 800; font-size: 12px; display: flex; align-items: center; gap: 6px;">
-                    <i class="fas fa-info-circle"></i> <%= st %>
-                </span>
+                <div class="status-badge" style="<%= stStyle %>">
+                    <i class="fas <%= stIcon %>"></i> <%= stText %>
+                </div>
             </div>
 
-            <div class="detail-grid">
+            <div class="detail-main-grid">
                 
-                <div class="info-card">
-                    <div class="info-label">Jenis Surat</div>
-                    <div class="info-value">
-                        <% if(letter.origin_type === 'EXTERNAL') { %>
-                            <span style="background:#fff1f2; color:#be123c; padding:2px 8px; border-radius:4px; font-size:11px; font-weight:700;">SURAT MASUK</span>
-                        <% } else { %>
-                            <span style="background:#eff6ff; color:#1d4ed8; padding:2px 8px; border-radius:4px; font-size:11px; font-weight:700;">SURAT KELUAR</span>
-                            <br><span style="font-size:12px; color:#64748b;"><%= letter.type_name %></span>
-                        <% } %>
-                    </div>
-
-                    <div class="info-label">Nomor Surat</div>
-                    <div class="info-value highlight" style="font-family: monospace; font-size: 15px;">
-                        <%= letter.letter_number || '-' %>
-                    </div>
-
-                    <div class="info-label">Tanggal Surat</div>
-                    <div class="info-value">
-                        <%= new Date(letter.created_at).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) %>
-                    </div>
-
-                    <div class="info-label">Perihal</div>
-                    <div class="info-value"><%= letter.subject %></div>
-
-                    <div class="info-label">Pengirim / Pembuat</div>
-                    <div class="info-value">
-                        <% if(letter.origin_type === 'EXTERNAL') { %>
-                            <%= letter.external_sender %>
-                        <% } else { %>
-                            <%= letter.staff_name %> (Internal)
-                        <% } %>
-                    </div>
-
-                    <hr style="border: 0; border-top: 1px solid #f1f5f9; margin: 20px 0;">
-
-                    <div class="info-label">Jejak Surat & Disposisi</div>
-                    <div class="timeline">
-                        <div class="timeline-item active">
-                            <div class="t-date"><%= new Date(letter.created_at).toLocaleDateString('id-ID') %></div>
-                            <div class="t-user">Surat Dibuat/Diterima</div>
-                            <div class="t-desc">Status awal: <b>DRAFT/PENDING</b></div>
+                <div class="detail-left-panel">
+                    
+                    <div class="info-item">
+                        <span class="label-text">Jenis Surat</span>
+                        <div class="value-text">
+                            <% if(letter.origin_type === 'EXTERNAL') { %>
+                                <span class="badge-in">SURAT MASUK</span>
+                            <% } else { %>
+                                <span class="badge-out">SURAT KELUAR</span>
+                                <br><span style="font-size:12px; color:#64748b; margin-top:5px; display:block;"><%= letter.type_name %></span>
+                            <% } %>
                         </div>
-
-                        <% if (disposisi && disposisi.length > 0) { %>
-                            <% disposisi.forEach(d => { %>
-                                <div class="timeline-item">
-                                    <div class="t-date"><%= new Date(d.created_at).toLocaleDateString('id-ID') %></div>
-                                    <div class="t-user">Disposisi ke Anggota</div>
-                                    <div class="t-desc">"<%= d.instruction %>"</div>
-                                </div>
-                            <% }) %>
-                        <% } %>
-
-                        <% if (letter.status === 'APPROVED') { %>
-                            <div class="timeline-item active">
-                                <div class="t-date"><%= new Date(letter.updated_at).toLocaleDateString('id-ID') %></div>
-                                <div class="t-user" style="color:#166534;">Disetujui Pimpinan</div>
-                                <div class="t-desc">Surat sah dan diberi nomor.</div>
-                            </div>
-                        <% } else if (letter.status === 'REJECTED') { %>
-                            <div class="timeline-item active">
-                                <div class="t-date"><%= new Date(letter.updated_at).toLocaleDateString('id-ID') %></div>
-                                <div class="t-user" style="color:#991b1b;">Ditolak Pimpinan</div>
-                                <div class="t-desc">Catatan: <%= letter.pimpinan_note %></div>
-                            </div>
-                        <% } %>
                     </div>
 
-                    <% if(letter.status === 'PENDING') { %>
-                        <div style="margin-top: 30px;">
-                            <button onclick="approveLetter(<%= letter.id %>)" style="width:100%; margin-bottom:10px; background:#166534; color:white; border:none; padding:12px; border-radius:8px; font-weight:700; cursor:pointer;">
-                                <i class="fas fa-check"></i> SETUJUI SURAT
-                            </button>
-                            <button onclick="rejectLetter(<%= letter.id %>)" style="width:100%; background:#ef4444; color:white; border:none; padding:12px; border-radius:8px; font-weight:700; cursor:pointer;">
-                                <i class="fas fa-times"></i> TOLAK
-                            </button>
+                    <div class="info-item">
+                        <span class="label-text">Nomor Surat</span>
+                        <div class="value-text highlight"><%= letter.letter_number || '-' %></div>
+                    </div>
+
+                    <div class="info-item">
+                        <span class="label-text">Tanggal</span>
+                        <div class="value-text">
+                            <%= new Date(letter.created_at).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) %>
                         </div>
-                    <% } %>
+                    </div>
 
-                </div>
+                    <div class="info-item">
+                        <span class="label-text">Perihal</span>
+                        <div class="value-text"><%= letter.subject %></div>
+                    </div>
 
-                <div class="preview-card">
-                    <% if (letter.ada_file) { %>
+                    <div class="info-item">
+                        <span class="label-text">Pengirim / Asal</span>
+                        <div class="value-text">
+                            <% if(letter.origin_type === 'EXTERNAL') { %>
+                                <%= letter.external_sender %>
+                            <% } else { %>
+                                <%= letter.staff_name %> (Internal)
+                            <% } %>
+                        </div>
+                    </div>
+
+                    <% if (letter.origin_type === 'EXTERNAL') { %>
                         
-                        <% if (typeof isPdf !== 'undefined' && isPdf) { %>
-                            <iframe 
-                                src="/download-surat/<%= letter.id %>" 
-                                width="100%" 
-                                height="100%" 
-                                style="border: none; flex:1;">
-                            </iframe>
-                        
+                        <% if (isTaskFinished) { %>
+                            <div style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 20px; border-radius: 8px; margin-top: 20px; text-align: center;">
+                                <i class="fas fa-check-circle" style="font-size: 32px; color: #166534; margin-bottom: 10px;"></i>
+                                <div style="font-weight: 700; color: #14532d;">Tugas Selesai</div>
+                                <p style="margin: 5px 0 0; font-size: 12px; color: #166534;">Surat telah selesai ditindaklanjuti.</p>
+                            </div>
+                        <% } else if (letter.status === 'DISPOSITION') { %>
+                            <div style="background: #e0f2fe; border: 1px solid #bae6fd; padding: 20px; border-radius: 8px; margin-top: 20px; text-align: center; color: #0369a1;">
+                                <i class="fas fa-hourglass-half" style="font-size: 32px; margin-bottom: 10px;"></i>
+                                <div style="font-weight: 700;">Sedang Diproses</div>
+                                <p style="margin: 5px 0 0; font-size: 12px;">Menunggu laporan penyelesaian dari Staff.</p>
+                            </div>
                         <% } else { %>
-                            <div style="height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#334155; padding:40px; text-align:center;">
-                                <i class="fas fa-file-word" style="font-size: 80px; color:#2563eb; margin-bottom: 20px;"></i>
-                                <h3 style="margin:0 0 10px;">File Dokumen Word</h3>
-                                <p style="color:#64748b; margin-bottom:25px; max-width:300px;">
-                                    Browser tidak dapat menampilkan preview file Word (.docx) secara langsung. Silakan unduh untuk melihat isinya.
-                                </p>
-                                <a href="/download-surat/<%= letter.id %>" class="btn-blue" style="background:#002BE8; color:white; padding:12px 25px; border-radius:30px; text-decoration:none; font-size:14px; font-weight:700; box-shadow:0 4px 15px rgba(37, 99, 235, 0.3);">
-                                    <i class="fas fa-download"></i> Unduh Dokumen
-                                </a>
+                            <div class="dispo-card">
+                                <div class="dispo-header"><i class="fas fa-paper-plane"></i> Form Disposisi</div>
+                                <form action="/pimpinan/disposition" method="POST">
+                                    <input type="hidden" name="letter_id" value="<%= letter.id %>">
+                                    
+                                    <span class="label-text">Pilih Bawahan</span>
+                                    <select name="receiver_id" class="form-control" required>
+                                        <option value="">-- Pilih Staff/Anggota --</option>
+                                        <% if(subordinates && subordinates.length > 0) { %>
+                                            <% subordinates.forEach(staff => { %>
+                                                <option value="<%= staff.id %>"><%= staff.full_name %> - <%= staff.nrp %></option>
+                                            <% }) %>
+                                        <% } %>
+                                    </select>
+
+                                    <span class="label-text">Instruksi</span>
+                                    <textarea name="notes" class="form-control" rows="3" placeholder="Isi instruksi..."></textarea>
+
+                                    <button type="submit" class="btn-submit-dispo">KIRIM DISPOSISI</button>
+                                </form>
                             </div>
                         <% } %>
 
                     <% } else { %>
-                        <div style="height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#64748b;">
-                            <i class="fas fa-file-pdf" style="font-size: 60px; margin-bottom: 20px; opacity: 0.5;"></i>
-                            <p style="font-weight: 500;">Tidak ada file fisik yang diunggah.</p>
-                            <p style="font-size: 13px;">(Hanya data teks)</p>
-                        </div>
+                        
+                        <% if (letter.status === 'PENDING' || letter.status === 'DRAFT') { %>
+                            <div class="action-row">
+                                <button onclick="rejectLetter(<%= letter.id %>)" class="btn-action btn-no">
+                                    <i class="fas fa-times"></i> TOLAK
+                                </button>
+                                <button onclick="approveLetter(<%= letter.id %>)" class="btn-action btn-yes">
+                                    <i class="fas fa-check"></i> SETUJUI
+                                </button>
+                            </div>
+                        <% } %>
+
                     <% } %>
+
+                    <div style="margin-top: 30px;">
+                        <span class="label-text">Riwayat Aktivitas</span>
+                        <div class="timeline-wrapper">
+                            <div class="timeline-event active">
+                                <div class="time-date"><%= new Date(letter.created_at).toLocaleDateString('id-ID') %></div>
+                                <div class="time-user">Surat Dibuat/Diterima</div>
+                                <div class="time-desc">Status awal: <b><%= letter.status %></b></div>
+                            </div>
+
+                            <% if (dispositions && dispositions.length > 0) { %>
+                                <% dispositions.forEach(d => { %>
+                                    <div class="timeline-event">
+                                        <div class="time-date"><%= new Date(d.created_at).toLocaleDateString('id-ID') %></div>
+                                        <div class="time-user">Disposisi ke: <%= d.receiver_name %></div>
+                                        <div class="time-desc">"<%= d.instruction || d.notes %>"</div>
+                                        <% if(d.status === 'COMPLETED') { %>
+                                            <div style="margin-top:5px; font-weight:700; color:#166534; font-size:11px;">
+                                                <i class="fas fa-check"></i> SELESAI
+                                            </div>
+                                        <% } %>
+                                    </div>
+                                <% }) %>
+                            <% } %>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="detail-right-panel">
+                    <iframe src="/download-surat/<%= letter.id %>" width="100%" height="100%" style="border:none;"></iframe>
                 </div>
 
             </div>
-
+            
             <div style="height: 50px;"></div>
         </main>
     </div>
@@ -213,7 +193,7 @@
     <script>
         function logout() {
             Swal.fire({
-                title: 'Keluar?', text: "Akhiri sesi ini?", icon: 'question',
+                title: 'Keluar?', icon: 'question',
                 showCancelButton: true, confirmButtonText: 'Logout', confirmButtonColor: '#ef4444'
             }).then((res) => { if (res.isConfirmed) window.location.href = '/logout'; });
         }

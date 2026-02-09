@@ -162,6 +162,7 @@ app.get('/logout', (req, res) => {
 });
 
 // API AMBIL DAFTAR USER
+
 app.get('/api/users', verifyToken, (req, res) => {
     const role = req.query.role;
     let sql = "SELECT id, full_name, nrp, role FROM users";
@@ -738,37 +739,27 @@ app.get('/staff/dispositions', verifyToken, (req, res) => {
 
 app.post('/api/dispositions/:id/complete', verifyToken, (req, res) => {
     const dispositionId = req.params.id;
-    
-    const sqlUpdate = "UPDATE dispositions SET status = 'COMPLETED' WHERE id = ? AND receiver_id = ?";
-    
-    db.query(sqlUpdate, [dispositionId, req.user.id], (err, result) => {
-        if(err) {
-            console.error(err);
-            return res.status(500).json({message: "Database Error"});
-        }
-        if(result.affectedRows === 0) {
-            return res.status(404).json({message: "Tugas tidak ditemukan atau bukan milik Anda."});
-        }
-        
-        const sqlInfo = `
-            SELECT l.subject, l.letter_number 
-            FROM dispositions d 
-            JOIN letters l ON d.letter_id = l.id 
-            WHERE d.id = ?
-        `;
+    const userId = req.user.id;
 
-        db.query(sqlInfo, [dispositionId], (err2, results) => {
-            let pesanLog = "";
+    const sqlCheck = "SELECT * FROM dispositions WHERE id = ? AND receiver_id = ?";
 
-            if (!err2 && results.length > 0) {
-                pesanLog = `Menyelesaikan tugas surat: "${results[0].subject}"`;
-            } else {
-                pesanLog = `Menyelesaikan tugas disposisi ID: ${dispositionId}`;
-            }
-            
-            logActivity(req.user.id, 'COMPLETE_TASK', pesanLog, req);
-            
-            res.json({message: "Tugas berhasil diselesaikan!"});
+    db.query(sqlCheck, [dispositionId, userId], (err, results) => {
+        if (err || results.length === 0) {
+            return res.status(404).json({ message: "Tugas tidak ditemukan atau akses ditolak." });
+        }
+
+        const letterId = results[0].letter_id;
+
+        db.query("UPDATE dispositions SET status = 'COMPLETED' WHERE id = ?", [dispositionId], (err2) => {
+            if (err2) return res.status(500).json({ message: "Database error" });
+
+            db.query("UPDATE letters SET status = 'COMPLETED' WHERE id = ?", [letterId], (err3) => {
+                if (err3) return res.status(500).json({ message: "Gagal update status surat" });
+
+                logActivity(userId, 'COMPLETE_TASK', `Menyelesaikan tugas disposisi (Letter ID: ${letterId})`, req);
+
+                res.json({ message: "Tugas berhasil diselesaikan! Status surat diperbarui." });
+            });
         });
     });
 });
@@ -1223,38 +1214,46 @@ app.get('/pimpinan/dashboard', verifyToken, (req, res) => {
 app.get('/pimpinan/detail', verifyToken, (req, res) => {
     const id = req.query.id;
 
-    db.query('SELECT * FROM users WHERE id = ?', [req.user.id], (err, uRes) => {
-        if(err) return res.redirect('/logout');
+    db.query('SELECT * FROM users WHERE id = ?', [req.user.id], (err, userResult) => {
+        if(err || userResult.length === 0) return res.redirect('/logout');
         
-        const sql = `
-            SELECT l.*, u.full_name as staff_name, t.name as type_name,
-                   (LENGTH(l.content_data) > 0) as ada_file
+        const freshUser = userResult[0];
+
+        const sqlSurat = `
+            SELECT l.*, t.name as type_name, u.full_name as pengirim_name
             FROM letters l
-            JOIN users u ON l.user_id = u.id
             LEFT JOIN letter_types t ON l.type_id = t.id
+            LEFT JOIN users u ON l.user_id = u.id
             WHERE l.id = ?
         `;
 
-        db.query(sql, [id], (err, results) => {
-            if (err || results.length === 0) return res.redirect('/pimpinan/dashboard');
-
-            const letter = results[0];
+        db.query(sqlSurat, [id], (err2, letterResult) => {
+            if(err2 || letterResult.length === 0) return res.redirect('/pimpinan/dashboard');
             
-            let isPdf = false;
-            if (letter.content_data) {
-                const header = letter.content_data.slice(0, 4).toString('hex');
-                if (header === '25504446') {
-                    isPdf = true;
-                }
-            }
+            const letter = letterResult[0];
 
-            db.query("SELECT * FROM dispositions WHERE letter_id = ? ORDER BY created_at DESC", [id], (err2, dispo) => {
-                res.render('pimpinan/detail', {
-                    title: 'Detail Surat',
-                    user: uRes[0],
-                    letter: letter,
-                    disposisi: dispo || [],
-                    isPdf: isPdf
+            const sqlStaff = "SELECT * FROM users WHERE role IN ('staff', 'anggota', 'admin') ORDER BY full_name ASC";
+
+            db.query(sqlStaff, (err3, staffResult) => {
+                
+                const sqlDispo = `
+                    SELECT d.*, u.full_name as receiver_name 
+                    FROM dispositions d
+                    JOIN users u ON d.receiver_id = u.id
+                    WHERE d.letter_id = ?
+                    ORDER BY d.created_at DESC
+                `;
+
+                db.query(sqlDispo, [id], (err4, dispoResult) => {
+                    res.render('pimpinan/detail', {
+                        title: 'Detail Surat',
+                        user: freshUser,
+                        letter: letter,
+                        subordinates: staffResult || [],
+                        dispositions: dispoResult || [],
+                        success_msg: req.query.success,
+                        error_msg: req.query.error
+                    });
                 });
             });
         });
@@ -1644,37 +1643,47 @@ app.post('/api/profile/password', verifyToken, async (req, res) => {
     });
 });
 
-app.post('/api/dispositions/create', verifyToken, (req, res) => {
-    const { letter_id, receiver_id, instruction } = req.body;
+app.post('/pimpinan/disposition', verifyToken, (req, res) => {
+    const { letter_id, receiver_id, notes } = req.body;
+    const sender_id = req.user.id;
 
-    const sqlInsert = "INSERT INTO dispositions (letter_id, sender_id, receiver_id, instruction) VALUES (?, ?, ?, ?)";
-    
-    db.query(sqlInsert, [letter_id, req.user.id, receiver_id, instruction], (err) => {
-        if(err) {
-            console.error("SQL Error:", err); 
-            return res.status(500).json({message: "Gagal mengirim disposisi"});
+    if (!letter_id || !receiver_id) {
+        return res.redirect(`/pimpinan/detail?id=${letter_id}&error=Data disposisi tidak lengkap`);
+    }
+
+    const sqlInsert = "INSERT INTO dispositions (letter_id, sender_id, receiver_id, instruction, status, created_at) VALUES (?, ?, ?, ?, 'PENDING', NOW())";
+
+    db.query(sqlInsert, [letter_id, sender_id, receiver_id, notes], (err, result) => {
+        if (err) {
+            console.error(err);
+            return res.redirect(`/pimpinan/detail?id=${letter_id}&error=Gagal mengirim disposisi`);
         }
 
-        const sqlInfo = `
-            SELECT 
-                (SELECT full_name FROM users WHERE id = ?) as nama_staff,
-                (SELECT subject FROM letters WHERE id = ?) as judul_surat
-        `;
-
-        db.query(sqlInfo, [receiver_id, letter_id], (err2, results) => {
-            let pesanLog = `Memerintah Staff ID: ${receiver_id}`;
-            
-            if (!err2 && results.length > 0) {
-                const staff = results[0].nama_staff || 'Staff';
-                const judul = results[0].judul_surat || 'Tanpa Judul';
-                pesanLog = `Mendisposisikan surat "${judul}" kepada ${staff}`;
+        db.query("UPDATE letters SET status = 'DISPOSITION' WHERE id = ?", [letter_id], (errUpdate) => {
+            if (errUpdate) {
+                console.error(errUpdate);
+                return res.redirect(`/pimpinan/detail?id=${letter_id}&error=Gagal update status surat`);
             }
 
-            logActivity(req.user.id, 'DISPOSITION', pesanLog, req);
-            
-            db.query("UPDATE letters SET status = 'DISPOSITION' WHERE id = ?", [letter_id]);
+            const sqlInfo = `
+                SELECT 
+                    (SELECT full_name FROM users WHERE id = ?) as staff_name,
+                    (SELECT subject FROM letters WHERE id = ?) as letter_subject
+            `;
 
-            res.json({message: "Perintah disposisi berhasil dikirim!"});
+            db.query(sqlInfo, [receiver_id, letter_id], (err2, results) => {
+                let logMessage = `Memberi disposisi ke Staff ID: ${receiver_id}`;
+                
+                if (!err2 && results.length > 0) {
+                    const staff = results[0].staff_name || 'Staff';
+                    const subject = results[0].letter_subject || 'Surat';
+                    logMessage = `Mendisposisikan surat "${subject}" kepada ${staff}`;
+                }
+
+                logActivity(sender_id, 'DISPOSITION', logMessage, req);
+
+                res.redirect(`/pimpinan/detail?id=${letter_id}&success=Disposisi berhasil dikirim`);
+            });
         });
     });
 });
