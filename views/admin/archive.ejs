@@ -90,44 +90,37 @@
                                 </div>
 
                                 <div style="text-align:center;" class="arc-action">
-                                    <% 
-                                        let downloadUrl = '#';
-                                        let iconClass = 'fa-file-word'; // Default icon Word
-                                        let showIcon = false;
-                                        
-                                        // LOGIKA BARU:
-                                        if (item.origin_type === 'EXTERNAL') {
-                                            // -- SURAT MASUK (EKSTERNAL) --
-                                            // Hanya muncul jika ada file yang diupload (JSON file_url)
-                                            try {
-                                                const c = JSON.parse(item.content_data || '{}');
-                                                if(c.file_url) { 
-                                                    downloadUrl = c.file_url; 
-                                                    showIcon = true; 
-                                                    iconClass = 'fa-file-pdf'; // Biasanya PDF
-                                                }
-                                            } catch(e){}
+    <% 
+        let downloadUrl = '#';
+        let iconClass = 'fa-file-word'; 
+        let showIcon = false;
+        
+        if (item.origin_type === 'EXTERNAL') {
+            // -- SURAT MASUK (EKSTERNAL) --
+            // Cek apakah ada nama file di kolom pdf_path
+            if (item.pdf_path && item.pdf_path !== '') { 
+                downloadUrl = `/uploads/${item.pdf_path}`; 
+                showIcon = true; 
+                iconClass = 'fa-file-pdf'; 
+            }
+        } else {
+            // -- SURAT KELUAR (INTERNAL) --
+            downloadUrl = `/download-surat/${item.id}`;
+            showIcon = true;
+            iconClass = 'fa-file-word'; 
+        }
+    %>
 
-                                        } else {
-                                            // -- SURAT KELUAR (INTERNAL) --
-                                            // SELALU MUNCUL ICON HIJAU (Untuk Preview/Download Draft)
-                                            // Tidak peduli statusnya Draft/Approved, arahkan ke generator route
-                                            downloadUrl = `/download-surat/${item.id}`;
-                                            showIcon = true;
-                                            iconClass = 'fa-file-word'; // Icon Word Hijau
-                                        }
-                                    %>
-
-                                    <% if (showIcon) { %>
-                                        <a href="<%= downloadUrl %>" target="_blank" class="btn-icon-file" title="Lihat Dokumen">
-                                            <i class="fas <%= iconClass %>"></i>
-                                        </a>
-                                    <% } else { %>
-                                        <span class="btn-icon-disabled">
-                                            <i class="fas fa-minus"></i>
-                                        </span>
-                                    <% } %>
-                                </div>
+    <% if (showIcon) { %>
+        <a href="<%= downloadUrl %>" target="_blank" class="btn-icon-file" title="Lihat Dokumen">
+            <i class="fas <%= iconClass %>"></i>
+        </a>
+    <% } else { %>
+        <span class="btn-icon-disabled" title="File tidak tersedia">
+            <i class="fas fa-minus"></i>
+        </span>
+    <% } %>
+</div>
 
                             </div>
                         <% }) %>
@@ -172,16 +165,16 @@
     </div>
 
     <script>
-        // LOGOUT SWEETALERT
+        
         function logout() {
             Swal.fire({
-                title: 'Keluar Aplikasi?',
-                text: "Sesi Anda akan diakhiri.",
+                title: 'Logout',
+                text: "Apakah Anda yakin ingin mengakhiri sesi ini?",
                 icon: 'question',
                 showCancelButton: true,
                 confirmButtonColor: '#ef4444',
                 cancelButtonColor: '#64748b',
-                confirmButtonText: 'Ya, Logout',
+                confirmButtonText: 'Ya',
                 cancelButtonText: 'Batal'
             }).then((result) => {
                 if (result.isConfirmed) {
@@ -190,7 +183,7 @@
             });
         }
 
-        // EXPORT EXCEL
+       
         function exportToExcel() {
             let items = document.querySelectorAll(".archive-item");
             if(items.length === 0) {

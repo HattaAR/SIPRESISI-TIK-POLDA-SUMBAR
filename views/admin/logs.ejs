@@ -121,13 +121,13 @@
         // 2. FUNGSI LOGOUT (SWEETALERT)
         function logout() {
             Swal.fire({
-                title: 'Keluar Aplikasi?',
-                text: "Sesi Anda akan diakhiri.",
+                title: 'Logout',
+                text: "Apakah Anda yakin ingin mengakhiri sesi ini?",
                 icon: 'question',
                 showCancelButton: true,
                 confirmButtonColor: '#ef4444',
                 cancelButtonColor: '#64748b',
-                confirmButtonText: 'Ya, Logout',
+                confirmButtonText: 'Ya',
                 cancelButtonText: 'Batal'
             }).then((result) => {
                 if (result.isConfirmed) {

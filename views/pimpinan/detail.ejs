@@ -4,10 +4,70 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><%= title %></title>
-    
     <link rel="stylesheet" href="/css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        .dashboard-container {
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+        }
+
+        .main-content {
+            flex: 1;
+            overflow-y: auto;
+            height: 100vh;
+            background-color: #F1F3D8xa;
+        }
+
+        .detail-main-grid {
+            display: grid;
+            grid-template-columns: 420px 1fr;
+            gap: 20px;
+            height: calc(100vh - 160px);
+            margin-top: 10px;
+        }
+
+        .detail-left-panel {
+            overflow-y: auto;
+            padding-right: 15px;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .detail-right-panel {
+            background: #64748b;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        #viewer-container {
+            flex: 1;
+            width: 100%;
+            overflow-y: auto;
+            display: flex;
+            justify-content: center;
+        }
+
+        #docx-preview-container {
+            background: white;
+            width: 100%;
+            min-height: 100%;
+            padding: 40px;
+        }
+
+        .info-item {
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+    </style>
 </head>
 <body>
 
@@ -17,7 +77,7 @@
         <main class="main-content">
             <%- include('../partials/header') %>
 
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding: 0 5px;">
                 <div>
                     <a href="/pimpinan/dashboard" style="text-decoration: none; color: #64748b; font-size: 13px; font-weight: 600;">
                         <i class="fas fa-arrow-left"></i> Kembali ke Dashboard
@@ -27,7 +87,6 @@
                 
                 <% 
                     let st = (letter.status || '').toUpperCase();
-                    
                     let isTaskFinished = false;
                     if (dispositions && dispositions.length > 0) {
                         dispositions.forEach(d => {
@@ -50,7 +109,7 @@
                         stStyle = "background:#1e293b; color:#ffffff;"; stIcon = "fa-flag-checkered"; stText = "SELESAI";
                     }
                 %>
-                <div class="status-badge" style="<%= stStyle %>">
+                <div class="status-badge" style="<%= stStyle %> padding: 8px 16px; border-radius: 20px; font-weight: 700; font-size: 12px;">
                     <i class="fas <%= stIcon %>"></i> <%= stText %>
                 </div>
             </div>
@@ -58,7 +117,6 @@
             <div class="detail-main-grid">
                 
                 <div class="detail-left-panel">
-                    
                     <div class="info-item">
                         <span class="label-text">Jenis Surat</span>
                         <div class="value-text">
@@ -94,13 +152,12 @@
                             <% if(letter.origin_type === 'EXTERNAL') { %>
                                 <%= letter.external_sender %>
                             <% } else { %>
-                                <%= letter.staff_name %> (Internal)
+                                <%= letter.pengirim_name %> (Internal)
                             <% } %>
                         </div>
                     </div>
 
                     <% if (letter.origin_type === 'EXTERNAL') { %>
-                        
                         <% if (isTaskFinished) { %>
                             <div style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 20px; border-radius: 8px; margin-top: 20px; text-align: center;">
                                 <i class="fas fa-check-circle" style="font-size: 32px; color: #166534; margin-bottom: 10px;"></i>
@@ -114,13 +171,11 @@
                                 <p style="margin: 5px 0 0; font-size: 12px;">Menunggu laporan penyelesaian dari Staff.</p>
                             </div>
                         <% } else { %>
-                            <div class="dispo-card">
-                                <div class="dispo-header"><i class="fas fa-paper-plane"></i> Form Disposisi</div>
+                            <div class="dispo-card" style="background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; margin-top: 20px;">
+                                <div class="dispo-header" style="font-weight: 700; margin-bottom: 10px; color: #1e293b;"><i class="fas fa-paper-plane"></i> Form Disposisi</div>
                                 <form action="/pimpinan/disposition" method="POST">
                                     <input type="hidden" name="letter_id" value="<%= letter.id %>">
-                                    
-                                    <span class="label-text">Pilih Bawahan</span>
-                                    <select name="receiver_id" class="form-control" required>
+                                    <select name="receiver_id" class="form-control" required style="width: 100%; padding: 10px; margin-bottom: 10px; border-radius: 6px; border: 1px solid #cbd5e1;">
                                         <option value="">-- Pilih Staff/Anggota --</option>
                                         <% if(subordinates && subordinates.length > 0) { %>
                                             <% subordinates.forEach(staff => { %>
@@ -128,73 +183,100 @@
                                             <% }) %>
                                         <% } %>
                                     </select>
-
-                                    <span class="label-text">Instruksi</span>
-                                    <textarea name="notes" class="form-control" rows="3" placeholder="Isi instruksi..."></textarea>
-
-                                    <button type="submit" class="btn-submit-dispo">KIRIM DISPOSISI</button>
+                                    <textarea name="notes" class="form-control" rows="3" placeholder="Isi instruksi..." style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1; margin-bottom: 10px;"></textarea>
+                                    <button type="submit" class="btn-submit-dispo" style="width: 100%; padding: 12px; background: #1e293b; color: white; border: none; border-radius: 6px; font-weight: 700; cursor: pointer;">KIRIM DISPOSISI</button>
                                 </form>
                             </div>
                         <% } %>
-
                     <% } else { %>
-                        
                         <% if (letter.status === 'PENDING' || letter.status === 'DRAFT') { %>
-                            <div class="action-row">
-                                <button onclick="rejectLetter(<%= letter.id %>)" class="btn-action btn-no">
-                                    <i class="fas fa-times"></i> TOLAK
-                                </button>
-                                <button onclick="approveLetter(<%= letter.id %>)" class="btn-action btn-yes">
-                                    <i class="fas fa-check"></i> SETUJUI
-                                </button>
+                            <div class="action-row" style="display: flex; gap: 10px; margin-top: 20px;">
+                                <button onclick="rejectLetter(<%= letter.id %>)" class="btn-action btn-no" style="flex: 1; padding: 12px; background: #fee2e2; color: #991b1b; border: none; border-radius: 6px; cursor: pointer; font-weight: 700;"><i class="fas fa-times"></i> TOLAK</button>
+                                <button onclick="approveLetter(<%= letter.id %>)" class="btn-action btn-yes" style="flex: 1; padding: 12px; background: #dcfce7; color: #166534; border: none; border-radius: 6px; cursor: pointer; font-weight: 700;"><i class="fas fa-check"></i> SETUJUI</button>
                             </div>
                         <% } %>
-
                     <% } %>
 
                     <div style="margin-top: 30px;">
-                        <span class="label-text">Riwayat Aktivitas</span>
+                        <span class="label-text" style="font-weight: 700; display: block; margin-bottom: 15px;">Riwayat Aktivitas</span>
                         <div class="timeline-wrapper">
-                            <div class="timeline-event active">
-                                <div class="time-date"><%= new Date(letter.created_at).toLocaleDateString('id-ID') %></div>
-                                <div class="time-user">Surat Dibuat/Diterima</div>
-                                <div class="time-desc">Status awal: <b><%= letter.status %></b></div>
+                            <div class="timeline-event active" style="padding-left: 20px; border-left: 2px solid #3b82f6; position: relative; padding-bottom: 20px;">
+                                <div class="time-date" style="font-size: 11px; color: #64748b;"><%= new Date(letter.created_at).toLocaleDateString('id-ID') %></div>
+                                <div class="time-user" style="font-weight: 700; color: #1e293b;">Surat Dibuat/Diterima</div>
+                                <div class="time-desc" style="font-size: 12px; color: #64748b;">Status: <%= letter.status %></div>
                             </div>
-
-                            <% if (dispositions && dispositions.length > 0) { %>
-                                <% dispositions.forEach(d => { %>
-                                    <div class="timeline-event">
-                                        <div class="time-date"><%= new Date(d.created_at).toLocaleDateString('id-ID') %></div>
-                                        <div class="time-user">Disposisi ke: <%= d.receiver_name %></div>
-                                        <div class="time-desc">"<%= d.instruction || d.notes %>"</div>
-                                        <% if(d.status === 'COMPLETED') { %>
-                                            <div style="margin-top:5px; font-weight:700; color:#166534; font-size:11px;">
-                                                <i class="fas fa-check"></i> SELESAI
-                                            </div>
-                                        <% } %>
-                                    </div>
-                                <% }) %>
-                            <% } %>
                         </div>
                     </div>
-
                 </div>
 
                 <div class="detail-right-panel">
-                    <iframe src="/download-surat/<%= letter.id %>" width="100%" height="100%" style="border:none;"></iframe>
+                    <div style="padding: 12px 20px; background: #1e293b; color: white; display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-size: 13px; font-weight: 600;"><i class="fas fa-eye"></i> Pratinjau Dokumen</span>
+                        
+                        <% 
+                            // Tentukan URL Download
+                            let dUrl = (letter.origin_type === 'EXTERNAL' && letter.pdf_path) 
+                                       ? `/uploads/${letter.pdf_path}` 
+                                       : `/download-surat/${letter.id}`; 
+                        %>
+                        <a href="<%= dUrl %>" target="_blank" style="background: #3b82f6; color: white; padding: 4px 12px; border-radius: 4px; font-size: 11px; text-decoration: none; font-weight: 700;">
+                            <i class="fas fa-download"></i> Unduh
+                        </a>
+                    </div>
+                    
+                    <div id="viewer-container">
+                        <% if (letter.origin_type === 'EXTERNAL') { %>
+                            <% if (letter.pdf_path && letter.pdf_path.trim() !== '') { %>
+                                <embed src="/uploads/<%= letter.pdf_path %>#toolbar=0" type="application/pdf" width="100%" height="100%" style="min-height: 600px;" />
+                            <% } else { %>
+                                <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; width:100%; height:100%; min-height:400px; color:#94a3b8; background:white;">
+                                    <i class="fas fa-file-excel" style="font-size:48px; margin-bottom:15px; color:#cbd5e1;"></i>
+                                    <h3 style="margin:0; color:#475569;">File Tidak Ditemukan</h3>
+                                    <p style="font-size:13px;">Tidak ada lampiran PDF untuk surat masuk ini.</p>
+                                </div>
+                            <% } %>
+                        <% } else { %>
+                            <div id="docx-preview-container">
+                                <div id="docx-loader" style="text-align: center; padding-top: 100px; color: #1e293b;">
+                                    <i class="fas fa-circle-notch fa-spin fa-3x"></i><br><br>
+                                    <span>Menyiapkan Pratinjau...</span>
+                                </div>
+                            </div>
+                        <% } %>
+                    </div>
                 </div>
 
             </div>
-            
-            <div style="height: 50px;"></div>
+
+
         </main>
     </div>
+
+    <% if (letter.origin_type !== 'EXTERNAL') { %>
+        <script src="https://unpkg.com/jszip/dist/jszip.min.js"></script>
+        <script src="https://unpkg.com/docx-preview/dist/docx-preview.js"></script>
+        <script>
+            async function renderDocx() {
+                try {
+                    const response = await fetch('/download-surat/<%= letter.id %>');
+                    const arrayBuffer = await response.arrayBuffer();
+                    const container = document.getElementById('docx-preview-container');
+                    const loader = document.getElementById('docx-loader');
+                    await docx.renderAsync(arrayBuffer, container);
+                    if (loader) loader.remove();
+                } catch (err) {
+                    document.getElementById('docx-preview-container').innerHTML = '<div style="padding:50px; text-align:center; color:red;">Gagal memuat pratinjau.</div>';
+                }
+            }
+            document.addEventListener('DOMContentLoaded', renderDocx);
+        </script>
+    <% } %>
 
     <script>
         function logout() {
             Swal.fire({
-                title: 'Keluar?', icon: 'question',
-                showCancelButton: true, confirmButtonText: 'Logout', confirmButtonColor: '#ef4444'
+                title: 'Keluar?', text: "Apakah Anda yakin ingin mengakhiri sesi ini?", icon: 'question',
+                showCancelButton: true, confirmButtonText: 'Ya', confirmButtonColor: '#ef4444'
             }).then((res) => { if (res.isConfirmed) window.location.href = '/logout'; });
         }
 
@@ -204,7 +286,6 @@
                 showCancelButton: true, confirmButtonColor: '#166534', confirmButtonText: 'Ya, Setujui'
             });
             if (!result.isConfirmed) return;
-            
             Swal.fire({ title: 'Memproses...', didOpen: () => Swal.showLoading() });
             try {
                 const res = await fetch(`/api/letters/${id}/approve`, { method: 'POST' });

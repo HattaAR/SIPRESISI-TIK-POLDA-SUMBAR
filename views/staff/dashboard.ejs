@@ -120,17 +120,9 @@
                                 </div>
 
                                 <div class="data-aksi" style="text-align:right;">
-                                    
                                     <% if(st === 'APPROVED' || item.origin_type === 'EXTERNAL') { %>
-                                        <% 
-                                            let downloadUrl = '#';
-                                            if (item.origin_type === 'EXTERNAL') {
-                                                try { downloadUrl = JSON.parse(item.content_data || '{}').file_url || '#'; } catch(e){}
-                                            } else {
-                                                downloadUrl = `/api/letters/${item.id}/download`;
-                                            }
-                                        %>
-                                        <a href="<%= downloadUrl %>" target="_blank" class="btn-mini mini-edit" title="Unduh File" style="width:auto; padding:0 12px; gap:6px; font-weight:700; color:#0284c7; background:#e0f2fe;">
+                                        
+                                        <a href="/download-surat/<%= item.id %>" target="_blank" class="btn-mini mini-edit" title="Unduh File" style="width:auto; padding:0 12px; gap:6px; font-weight:700; color:#0284c7; background:#e0f2fe;">
                                             <i class="fas fa-download"></i> Unduh
                                         </a>
 
@@ -187,7 +179,6 @@
     </div>
 
     <script>
-        // Modal Note
         function showNote(note) {
             document.getElementById('noteContent').innerText = (note && note !== 'null') ? note : "Tidak ada catatan.";
             document.getElementById('modalRevisi').style.display = 'flex';
@@ -196,7 +187,6 @@
             document.getElementById('modalRevisi').style.display = 'none';
         }
 
-        // SweetAlert - Kirim Surat
         async function ajukanSurat(id) {
             const result = await Swal.fire({
                 title: 'Kirim ke Pimpinan?',
@@ -214,7 +204,6 @@
             Swal.fire({ title: 'Mengirim...', didOpen: () => Swal.showLoading() });
 
             try {
-                // Perhatikan method POST agar sesuai backend
                 const res = await fetch(`/api/letters/${id}/send`, { method: 'POST' }); 
                 const data = await res.json();
                 
@@ -226,7 +215,6 @@
             } catch(e) { Swal.fire('Error', 'Koneksi gagal', 'error'); }
         }
 
-        // SweetAlert - Hapus Surat
         async function hapusSurat(id) {
             const result = await Swal.fire({
                 title: 'Hapus Draft?',
@@ -257,8 +245,8 @@
 
         function logout() {
             Swal.fire({
-                title: 'Keluar?', text: "Akhiri sesi ini?", icon: 'question',
-                showCancelButton: true, confirmButtonText: 'Logout', confirmButtonColor: '#ef4444'
+                title: 'Logout', text: "Apakah Anda yakin ingin mengakhiri sesi ini?", icon: 'question',
+                showCancelButton: true, confirmButtonText: 'Ya', confirmButtonColor: '#ef4444'
             }).then((res) => { if (res.isConfirmed) window.location.href = '/logout'; });
         }
     </script>

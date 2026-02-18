@@ -11,6 +11,8 @@
     <style>
         .badge-status-ok { background: #dcfce7; color: #166534; padding: 5px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; gap: 5px; }
         .quote-box { background: #fffbeb; border-left: 3px solid #f59e0b; padding: 8px 12px; font-style: italic; color: #92400e; border-radius: 4px; font-size: 13px; margin-top: 5px; }
+        .action-btns { display: flex; flex-direction: column; gap: 8px; }
+        .action-btns .btn-blue, .action-btns .btn-done { display: flex; align-items: center; justify-content: center; width: 100%; gap: 6px; }
     </style>
 </head>
 <body>
@@ -71,19 +73,20 @@
 
                                 <div class="col-action">
                                     <% if (task.status === 'COMPLETED') { %>
-                                        <div class="badge-status-ok" style="width:100%; justify-content:center;">
-                                            <i class="fas fa-check-double"></i> SELESAI
+                                        <div class="badge-status-ok" style="width:100%; justify-content:center; padding:12px 0;">
+                                            <i class="fas fa-check-double"></i> TUGAS SELESAI
                                         </div>
                                     <% } else { %>
-                                        <div style="display:flex; flex-direction:column; gap:8px;">
+                                        <div class="action-btns">
                                             
                                             <% if(task.ada_file) { %>
-                                                <a href="/download-surat/<%= task.letter_id %>" target="_blank" class="btn-blue" style="background:#475569; font-size:12px; padding:8px;">
-                                                    <i class="fas fa-eye"></i> Baca Surat
+                                                <% let docUrl = (task.pdf_path) ? `/uploads/${task.pdf_path}` : `/download-surat/${task.letter_id}`; %>
+                                                <a href="<%= docUrl %>" target="_blank" class="btn-blue" style="background:#475569; font-size:12px; padding:8px;">
+                                                    <i class="fas fa-file-pdf"></i> Lihat File
                                                 </a>
                                             <% } else { %>
                                                 <button disabled class="btn-blue" style="background:#e2e8f0; color:#94a3b8; font-size:12px; padding:8px; cursor:not-allowed;">
-                                                    <i class="fas fa-eye-slash"></i> No File
+                                                    <i class="fas fa-eye-slash"></i> File Kosong
                                                 </button>
                                             <% } %>
 
@@ -91,7 +94,7 @@
                                                 <i class="fas fa-pen-nib"></i> Balas / Lapor
                                             </a>
 
-                                            <button onclick="markAsDone(<%= task.id %>)" class="btn-done" style="background:transparent; color:#166534; border:1px solid #166534; padding:6px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer;">
+                                            <button onclick="markAsDone(<%= task.id %>)" class="btn-done" style="background:transparent; color:#166534; border:1px solid #166534; padding:8px; border-radius:6px; font-size:12px; font-weight:700; cursor:pointer;">
                                                 <i class="fas fa-check"></i> Selesai Langsung
                                             </button>
                                         </div>
@@ -118,11 +121,11 @@
 <script>
     function logout() { 
         Swal.fire({
-            title: 'Keluar?',
-            text: "Akhiri sesi ini?",
+            title: 'Logout',
+            text: "Apakah Anda yakin ingin mengakhiri sesi ini?",
             icon: 'question',
             showCancelButton: true,
-            confirmButtonText: 'Logout',
+            confirmButtonText: 'Ya',
             confirmButtonColor: '#ef4444',
             cancelButtonText: 'Batal'
         }).then((res) => { if (res.isConfirmed) window.location.href = '/logout'; });
@@ -150,17 +153,19 @@
 
         try {
             const res = await fetch(`/api/dispositions/${dispositionId}/complete`, { method: 'POST' });
+            const data = await res.json();
 
             if(res.ok) {
                 Swal.fire({
                     icon: 'success',
                     title: 'Tugas Selesai!',
+                    text: data.message,
                     confirmButtonText: 'OK',
                     confirmButtonColor: '#166534',
                     backdrop: `rgba(22, 101, 52, 0.4) blur(5px)`
                 }).then(() => { window.location.reload(); });
             } else {
-                Swal.fire('Gagal', 'Gagal update status.', 'error');
+                Swal.fire('Gagal', data.message || 'Gagal update status.', 'error');
             }
         } catch(e) {
             Swal.fire('Error', 'Koneksi gagal.', 'error');

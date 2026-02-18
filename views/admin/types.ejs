@@ -4,184 +4,41 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><%= title %></title>
-    
     <link rel="stylesheet" href="/css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
     <style>
-        /* --- 1. GLOBAL RESET --- */
-        * { box-sizing: border-box; outline: none; }
-        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
-
-        /* --- 2. MODAL & NOTIFIKASI MEWAH (CENTERED) --- */
-        
-        /* Backdrop Blur */
-        div:where(.swal2-container).swal2-backdrop-show {
-            background: rgba(15, 23, 42, 0.6) !important;
-            backdrop-filter: blur(8px) !important;
+        .dashboard-container { min-height: 100vh; display: flex; background-color: #EFEFC8; }
+        .main-content { flex: 1; padding: 20px; width: 100%; }
+        .action-group { display: flex; gap: 8px; justify-content: flex-end; }
+        .modal-overlay { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.5); z-index: 9999; display: none; 
+            align-items: center; justify-content: center; 
         }
-
-        /* Kotak Dialog */
-        div:where(.swal2-popup) {
-            border-radius: 20px !important;
-            padding: 30px !important;
-            background: #ffffff !important;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
-            width: 420px !important;
-        }
-
-        /* Judul */
-        div:where(.swal2-title) {
-            color: #1e293b !important;
-            font-size: 1.25rem !important;
-            font-weight: 700 !important;
-            margin-top: 10px !important;
-        }
-
-        /* Tombol Confirm (Biru) */
-        div:where(.swal2-actions) button.swal2-confirm {
-            background: linear-gradient(135deg, #002BE8, #2563eb) !important;
-            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3) !important;
-            border-radius: 10px !important;
-            padding: 12px 30px !important;
-            font-weight: 600 !important;
-        }
-
-        /* Tombol Cancel (Abu) */
-        div:where(.swal2-actions) button.swal2-cancel {
-            background: #f1f5f9 !important;
-            color: #64748b !important;
-            border-radius: 10px !important;
-            padding: 12px 20px !important;
-            font-weight: 600 !important;
-        }
-
-        /* --- 3. LAYOUT TABEL & MODAL --- */
-        
-        /* Container Putih */
-        .premium-container {
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
-            border: 1px solid #f1f5f9;
-            overflow: hidden; /* Agar sudut tumpul tidak terpotong */
-        }
-
-        /* Grid System yang Konsisten */
-        .grid-row {
-            display: grid;
-            grid-template-columns: 80px 2fr 2fr 1.5fr 120px; /* Kolom Aksi dilebarkan */
-            align-items: center;
-            padding: 15px 20px;
-            border-bottom: 1px solid #f1f5f9;
-        }
-
-        .list-header {
-            background: #f8fafc;
-            font-weight: 700;
-            color: #475569;
-            font-size: 12px;
-            letter-spacing: 0.5px;
-            text-transform: uppercase;
-        }
-
-        .list-item:hover { background-color: #fcfcfc; }
-
-        /* --- 4. FIX TOMBOL AKSI (BERJARAK) --- */
-        .action-group {
-            display: flex;
-            gap: 10px; /* Jarak antar tombol */
-            justify-content: flex-end;
-        }
-
-        .btn-icon {
-            width: 35px; height: 35px;
-            display: flex; align-items: center; justify-content: center;
-            border-radius: 8px; border: none; cursor: pointer;
-            transition: 0.2s; font-size: 14px;
-        }
-        .btn-config { background: #f1f5f9; color: #475569; }
-        .btn-config:hover { background: #e2e8f0; color: #1e293b; }
-        
-        .btn-delete { background: #fee2e2; color: #ef4444; }
-        .btn-delete:hover { background: #fecaca; color: #b91c1c; }
-
-        /* --- 5. FIX UPLOAD AREA (BUG KLIK) --- */
-        .upload-wrapper {
-            position: relative; /* Kunci Parent */
-            width: 100%;
-            height: 140px;
-            margin-top: 5px;
-            background: #f8fafc;
-            border-radius: 10px;
-        }
-
-        .upload-visual {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            border: 2px dashed #cbd5e1; border-radius: 10px;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            pointer-events: none; /* Klik tembus ke input */
-            transition: 0.2s;
-        }
-
-        .file-input-lock {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            opacity: 0; cursor: pointer; z-index: 10;
-            display: block; /* Pastikan block element */
-        }
-
-        .file-input-lock:hover + .upload-visual {
-            border-color: #002BE8; background: #eff6ff;
-        }
-
-        /* --- 6. MODAL FORM ELEMENTS --- */
-        .modal-box {
-            position: relative; background: #fff; width: 550px;
-            padding: 30px; border-radius: 16px;
-        }
-        .form-grid { display: grid; gap: 15px; }
-        .form-cols { display: grid; grid-template-columns: 1fr 2fr; gap: 15px; }
-        
-        .form-label { display: block; font-size: 13px; font-weight: 600; color: #64748b; margin-bottom: 6px; }
-        .form-input {
-            width: 100%; padding: 12px; border: 1px solid #e2e8f0;
-            border-radius: 8px; font-size: 14px; outline: none; transition: 0.2s;
-            background: #f8fafc;
-        }
-        .form-input:focus { border-color: #002BE8; background: white; box-shadow: 0 0 0 3px rgba(0,43,232,0.1); }
-
-        .btn-primary {
-            background: #002BE8; color: white; width: 100%; padding: 14px;
-            border: none; border-radius: 10px; font-weight: 700; cursor: pointer;
-            margin-top: 20px; transition: 0.2s;
-        }
-        .btn-primary:hover { background: #0022b8; transform: translateY(-1px); }
-        .close-btn { position: absolute; top: 25px; right: 25px; font-size: 20px; cursor: pointer; color: #94a3b8; }
+        .modal-modern { background: white; border-radius: 12px; width: 95%; max-width: 550px; max-height: 90vh; overflow-y: auto; }
     </style>
 </head>
 <body>
 
     <div class="dashboard-container">
         <%- include('../partials/sidebar') %>
-
         <main class="main-content">
             <%- include('../partials/header') %>
 
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
                 <div>
-                    <h2 style="margin:0; font-size: 24px; color:#0f172a; font-weight: 700;">Jenis Surat</h2>
-                    <p style="color:#64748b; font-size:14px; margin-top:5px;">Kelola template surat dan format penomoran.</p>
+                    <h2 style="margin:0; font-size: 24px; color:#0f172a; font-weight: 800;">Jenis Surat</h2>
+                    <p style="color:#64748b; font-size:14px; margin-top:5px;">Atur template surat, format nomor, dan form input khusus.</p>
                 </div>
-                <button onclick="openModal()" class="btn-blue" style="padding: 12px 24px; border-radius: 8px; font-weight: 600; box-shadow: 0 4px 6px rgba(0, 43, 232, 0.2); cursor: pointer;">
-                    <i class="fas fa-plus"></i> Tambah Jenis
+                <button onclick="openModal()" class="btn-blue" style="cursor: pointer;">
+                    <i class="fas fa-plus"></i> Tambah Jenis Baru
                 </button>
             </div>
 
             <div class="premium-container">
-                <div class="grid-row list-header">
+                <div class="grid-header">
                     <div>PREFIX</div>
                     <div>JENIS SURAT</div>
                     <div>FORMAT NOMOR</div>
@@ -199,201 +56,147 @@
                                     if(Array.isArray(parsed)) schemaCount = parsed.length;
                                 } catch(e){}
                             %>
-                            <div class="grid-row list-item">
-                                <div><span class="badge" style="background:#eff6ff; color:#1d4ed8; font-weight:700;"><%= item.code_prefix %></span></div>
-                                
+                            <div class="grid-row">
+                                <div><span class="badge-prefix"><%= item.code_prefix %></span></div>
                                 <div style="font-weight:600; color:#334155;"><%= item.name %></div>
-                                
-                                <div><code style="font-size:12px; color:#db2777; background:#fdf2f8; padding:4px 8px; border-radius:6px; font-family:monospace;"><%= item.letter_number_format %></code></div>
-                                
+                                <div><span class="badge-format"><%= item.letter_number_format %></span></div>
                                 <div>
-                                    <div style="display:flex; flex-direction:column; gap:5px;">
-                                        <% if(item.template_path) { %>
-                                            <span style="font-size:11px; font-weight:700; color:#059669; background:#ecfdf5; padding:4px 10px; border-radius:20px; width:fit-content; display:inline-flex; align-items:center; gap:5px;">
-                                                <i class="fas fa-check-circle"></i> Template OK
-                                            </span>
-                                        <% } else { %>
-                                            <span style="font-size:11px; font-weight:700; color:#dc2626; background:#fef2f2; padding:4px 10px; border-radius:20px; width:fit-content; display:inline-flex; align-items:center; gap:5px;">
-                                                <i class="fas fa-exclamation-circle"></i> No Template
-                                            </span>
-                                        <% } %>
-                                        
+                                    <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-start;">
+                                        <span class="status-pill <%= item.template_path ? 'status-ok' : 'status-no' %>">
+                                            <i class="fas <%= item.template_path ? 'fa-check-circle' : 'fa-exclamation-triangle' %>"></i>
+                                            <%= item.template_path ? 'Template Tersedia' : 'Belum Upload' %>
+                                        </span>
                                         <% if(schemaCount > 0) { %>
-                                            <span style="font-size:11px; color:#64748b; margin-left:5px;">+ <%= schemaCount %> Input Khusus</span>
+                                            <span style="font-size:11px; color:#64748b; margin-left:5px;">
+                                                <i class="fas fa-list-ul"></i> <%= schemaCount %> Input Khusus
+                                            </span>
                                         <% } %>
                                     </div>
                                 </div>
-
                                 <div class="action-group">
-                                    <button onclick="bukaModalSchema(<%= item.id %>)" class="btn-icon btn-config" title="Konfigurasi Input">
+                                    <button onclick='prepareEdit(<%= JSON.stringify(item) %>)' class="btn-icon" title="Edit" style="background:#fef9c3; color:#a16207; border:none; border-radius:4px; padding:5px 8px; cursor:pointer;">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button onclick="bukaModalSchema(<%= item.id %>)" class="btn-icon btn-config" title="Konfigurasi Form">
                                         <i class="fas fa-cog"></i>
                                     </button>
-                                    <button onclick="hapusType(<%= item.id %>)" class="btn-icon btn-delete" title="Hapus Jenis">
+                                    <button onclick="hapusType(<%= item.id %>)" class="btn-icon btn-delete" title="Hapus">
                                         <i class="fas fa-trash-alt"></i>
                                     </button>
                                 </div>
                             </div>
                         <% }) %>
                     <% } else { %>
-                        <div style="padding:60px; text-align:center; color:#94a3b8;">
-                            <i class="fas fa-folder-open" style="font-size:48px; margin-bottom:15px; opacity:0.3;"></i><br>
-                            Belum ada jenis surat.<br>Klik tombol "Tambah Jenis" diatas.
-                        </div>
+                        <div style="padding:60px; text-align:center; color:#94a3b8;">Belum ada jenis surat.</div>
                     <% } %>
                 </div>
             </div>
-            
             <div style="height: 50px;"></div>
         </main>
     </div>
 
     <div id="modalAdd" class="modal-overlay">
-        <div class="modal-box">
-            <h3 style="margin:0 0 20px 0; color:#1e293b; font-size:20px;">Tambah Jenis Surat</h3>
-            <i class="fas fa-times close-btn" onclick="closeModal()"></i>
-
-            <form id="formAddType" enctype="multipart/form-data">
-                <div class="form-grid">
-                    <div>
+        <div class="modal-modern">
+            <div class="modal-header">
+                <h3 class="modal-title" id="modalTitle">Tambah Jenis Surat</h3>
+                <button type="button" class="btn-close-modal" onclick="closeModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="formAddType" enctype="multipart/form-data" autocomplete="off">
+                <input type="hidden" name="type_id" id="edit_type_id">
+                <div class="modal-body">
+                    <div class="form-group">
                         <label class="form-label">Nama Jenis Surat</label>
-                        <input type="text" name="name" class="form-input" placeholder="Contoh: Surat Perintah Tugas" required>
+                        <input type="text" name="name" id="inName" class="modern-input" required>
                     </div>
-
-                    <div class="form-cols">
-                        <div>
+                    <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                        <div class="form-group">
                             <label class="form-label">Kode Prefix</label>
-                            <input type="text" name="code_prefix" class="form-input" placeholder="SPRIN" required>
+                            <input type="text" name="code_prefix" id="inPrefix" class="modern-input" required style="text-transform: uppercase;">
                         </div>
-                        <div>
+                        <div class="form-group">
                             <label class="form-label">Format Nomor</label>
-                            <input type="text" name="letter_number_format" id="inFormatNomor" class="form-input" value="{kode}/{nomor}/{bulan}/{tahun}" required>
+                            <input type="text" name="letter_number_format" id="inFormatNomor" class="modern-input" required>
                         </div>
                     </div>
-
-                    <div>
+                    <div class="form-group">
                         <label class="form-label">Upload Template (.docx)</label>
-                        <div class="upload-wrapper">
-                            <input type="file" name="template_file" accept=".docx" class="file-input-lock" required onchange="updateFileName(this)">
-                            
-                            <div class="upload-visual">
-                                <i class="fas fa-cloud-upload-alt" style="font-size:36px; color:#94a3b8; margin-bottom:10px;"></i>
-                                <p id="fileNameDisplay" style="margin:0; font-size:14px; color:#475569; font-weight:600;">Klik area ini untuk memilih file</p>
-                                <span style="font-size:12px; color:#94a3b8; margin-top:5px;">Hanya format .docx yang didukung</span>
-                            </div>
+                        <div class="upload-zone" onclick="document.getElementById('fileInput').click()" style="border: 2px dashed #cbd5e1; padding: 20px; text-align: center; cursor: pointer; border-radius: 8px;">
+                            <i class="fas fa-cloud-upload-alt" style="font-size: 32px; color: #94a3b8; margin-bottom: 10px;"></i>
+                            <div id="uploadText" style="font-size: 13px; color: #64748b;">Klik untuk memilih file template</div>
+                            <div id="fileNameDisplay" style="margin-top:10px; font-weight:700; color:#002BE8; font-size:13px;"></div>
                         </div>
+                        <input type="file" id="fileInput" name="template_file" accept=".docx" style="display: none;" onchange="updateFileName(this)">
                     </div>
                 </div>
-
-                <button type="submit" class="btn-primary"><i class="fas fa-save"></i> SIMPAN DATA</button>
+                <div class="modal-footer">
+                    <button type="submit" class="btn-save-modern" id="btnSubmit">SIMPAN DATA</button>
+                </div>
             </form>
         </div>
     </div>
 
     <div id="modalSchema" class="modal-overlay">
-        <div class="modal-box" style="width: 800px; max-width: 95%;">
-            <h3 style="margin:0 0 20px 0; color:#1e293b;">Konfigurasi Form</h3>
-            <i class="fas fa-times close-btn" onclick="tutupModalSchema()"></i>
-            
-            <div id="schemaContainer" style="max-height:50vh; overflow-y:auto; margin-bottom:20px; padding-right:5px;"></div>
-
-            <button onclick="tambahBarisSchema()" style="width:100%; padding:12px; border:2px dashed #e2e8f0; background:#f8fafc; color:#64748b; font-weight:600; cursor:pointer; border-radius:10px;">
-                <i class="fas fa-plus-circle"></i> Tambah Input Baru
-            </button>
-
-            <div style="margin-top:20px; text-align:right;">
-                <input type="hidden" id="idTypeTarget">
-                <button onclick="simpanSchema()" class="btn-primary" style="width:auto; padding:12px 30px; margin-top:0;">
-                    Simpan Konfigurasi
+        <div class="modal-modern" style="max-width: 800px;">
+            <div class="modal-header">
+                <h3 class="modal-title">Konfigurasi Form Input</h3>
+                <button type="button" class="btn-close-modal" onclick="tutupModalSchema()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <div id="schemaContainer" style="max-height:40vh; overflow-y:auto; margin-bottom:20px;"></div>
+                <button onclick="tambahBarisSchema()" class="upload-zone" style="width:100%; border:2px dashed #cbd5e1; cursor:pointer;">
+                    <i class="fas fa-plus-circle"></i> Tambah Field Input Baru
                 </button>
+            </div>
+            <div class="modal-footer">
+                <input type="hidden" id="idTypeTarget">
+                <button onclick="simpanSchema()" class="btn-save-modern">Simpan Konfigurasi</button>
             </div>
         </div>
     </div>
 
     <script>
         const allData = <%- JSON.stringify(types || []) %>;
-        let currentSchema = []; 
+        let currentSchema = [];
+        let isEditMode = false;
 
-        function openModal() { document.getElementById('modalAdd').style.display = 'flex'; }
-        function closeModal() { document.getElementById('modalAdd').style.display = 'none'; }
-        
-        function updateFileName(input) {
-            const display = document.getElementById('fileNameDisplay');
-            if (input.files && input.files[0]) {
-                display.innerHTML = '<span style="color:#002BE8; font-weight:700;"><i class="fas fa-file-word"></i> ' + input.files[0].name + '</span>';
-            } else {
-                display.innerText = "Klik area ini untuk memilih file";
-            }
+        function openModal() {
+            isEditMode = false;
+            document.getElementById('formAddType').reset();
+            document.getElementById('edit_type_id').value = "";
+            document.getElementById('modalTitle').innerText = "Tambah Jenis Surat";
+            document.getElementById('btnSubmit').innerText = "SIMPAN DATA";
+            document.getElementById('fileInput').required = true;
+            document.getElementById('fileNameDisplay').innerText = "";
+            document.getElementById('uploadText').innerText = "Klik untuk memilih file template";
+            const modal = document.getElementById('modalAdd');
+            modal.style.display = 'flex';
+            setTimeout(() => modal.classList.add('show'), 10);
         }
 
-        // --- HANDLER SIMPAN (NOTIFIKASI TENGAH) ---
-        document.getElementById('formAddType').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            const format = document.getElementById('inFormatNomor').value;
-            
-            if(!format.includes('{nomor}') || !format.includes('{tahun}')) {
-                Swal.fire({ 
-                    icon: 'warning', 
-                    title: 'Format Tidak Valid', 
-                    text: 'Format nomor wajib mengandung {nomor} dan {tahun}', 
-                    confirmButtonText: 'Perbaiki' 
-                });
-                return;
-            }
-            
-            const formData = new FormData(this);
-            
-            // Loading
-            Swal.fire({ title: 'Menyimpan Data...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-
-            try {
-                const res = await fetch('/api/types', { method: 'POST', body: formData });
-                const result = await res.json();
-                
-                if(res.ok) { 
-                    Swal.fire({ 
-                        icon: 'success', 
-                        title: 'Berhasil!', 
-                        text: 'Data jenis surat berhasil disimpan.',
-                        confirmButtonText: 'Selesai'
-                    }).then(() => location.reload()); 
-                } else { 
-                    Swal.fire('Gagal', result.message, 'error'); 
-                }
-            } catch(e) { 
-                Swal.fire('Error', 'Gagal terhubung ke server', 'error'); 
-            }
-        });
-
-        // --- HANDLER HAPUS (NOTIFIKASI TENGAH) ---
-        function hapusType(id) {
-            Swal.fire({
-                title: 'Hapus data ini?', 
-                text: "Data yang dihapus tidak bisa dikembalikan.", 
-                icon: 'warning', 
-                showCancelButton: true, 
-                confirmButtonColor: '#ef4444', 
-                cancelButtonColor: '#94a3b8',
-                confirmButtonText: 'Ya, Hapus',
-                cancelButtonText: 'Batal',
-                focusCancel: true
-            }).then(async (result) => {
-                if (result.isConfirmed) {
-                    Swal.fire({ title: 'Menghapus...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-                    try {
-                        const res = await fetch(`/api/types/${id}`, { method: 'DELETE' });
-                        if(res.ok) { 
-                            Swal.fire({ icon: 'success', title: 'Terhapus!', text: 'Data berhasil dihapus.', confirmButtonText: 'Oke' }).then(() => location.reload()); 
-                        } else {
-                            Swal.fire('Gagal', 'Tidak bisa menghapus data.', 'error');
-                        }
-                    } catch(e) {
-                        Swal.fire('Error', 'Koneksi error.', 'error');
-                    }
-                }
-            });
+        function prepareEdit(item) {
+            isEditMode = true;
+            document.getElementById('edit_type_id').value = item.id;
+            document.getElementById('inName').value = item.name;
+            document.getElementById('inPrefix').value = item.code_prefix;
+            document.getElementById('inFormatNomor').value = item.letter_number_format;
+            document.getElementById('modalTitle').innerText = "Edit Jenis Surat";
+            document.getElementById('btnSubmit').innerText = "UPDATE DATA";
+            document.getElementById('fileInput').required = false;
+            document.getElementById('uploadText').innerText = "Ganti template (biarkan jika tidak diubah)";
+            document.getElementById('fileNameDisplay').innerText = item.template_path || "";
+            const modal = document.getElementById('modalAdd');
+            modal.style.display = 'flex';
+            setTimeout(() => modal.classList.add('show'), 10);
         }
 
-        // --- LOGIC SCHEMA ---
+        function closeModal() {
+            const modal = document.getElementById('modalAdd');
+            modal.classList.remove('show');
+            setTimeout(() => modal.style.display = 'none', 300);
+        }
+
         function bukaModalSchema(id) {
             const type = allData.find(t => t.id == id);
             if(!type) return;
@@ -404,35 +207,73 @@
                 currentSchema = Array.isArray(raw) ? raw : [];
             } catch(e) { currentSchema = []; }
             renderSchemaList();
-            document.getElementById('modalSchema').style.display = 'flex';
+            const modal = document.getElementById('modalSchema');
+            modal.style.display = 'flex';
+            setTimeout(() => modal.classList.add('show'), 10);
         }
-        function tutupModalSchema() { document.getElementById('modalSchema').style.display = 'none'; }
+
+        function tutupModalSchema() {
+            const modal = document.getElementById('modalSchema');
+            modal.classList.remove('show');
+            setTimeout(() => modal.style.display = 'none', 300);
+        }
+
+        window.onclick = function(event) {
+            if (event.target.classList.contains('modal-overlay')) {
+                closeModal();
+                tutupModalSchema();
+            }
+        }
+
+        function updateFileName(input) {
+            const display = document.getElementById('fileNameDisplay');
+            if (input.files && input.files[0]) {
+                display.innerHTML = '<i class="fas fa-file-word"></i> ' + input.files[0].name;
+            }
+        }
+
+        document.getElementById('formAddType').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const format = document.getElementById('inFormatNomor').value;
+            if(!format.includes('{nomor}') || !format.includes('{tahun}')) {
+                Swal.fire({ icon: 'warning', title: 'Format Salah', text: 'Format wajib ada {nomor} dan {tahun}' });
+                return;
+            }
+            const formData = new FormData(this);
+            const typeId = document.getElementById('edit_type_id').value;
+            const url = isEditMode ? `/api/types/${typeId}` : '/api/types';
+            const method = isEditMode ? 'PUT' : 'POST';
+
+            Swal.fire({ title: 'Memproses...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+            try {
+                const res = await fetch(url, { method: method, body: formData });
+                if(res.ok) {
+                    Swal.fire({ icon: 'success', title: 'Berhasil!' }).then(() => location.reload());
+                } else {
+                    const result = await res.json();
+                    Swal.fire('Gagal', result.message, 'error');
+                }
+            } catch(e) { Swal.fire('Error', 'Gagal koneksi server', 'error'); }
+        });
 
         function renderSchemaList() {
             const container = document.getElementById('schemaContainer');
-            container.innerHTML = '';
-            
-            if(currentSchema.length === 0) {
-                container.innerHTML = `<div style="text-align:center; padding:30px; color:#94a3b8;">
-                    <i class="fas fa-list-ul" style="font-size:24px; margin-bottom:10px; opacity:0.5;"></i><br>
-                    Belum ada input khusus.<br>Klik tombol tambah di bawah.
-                </div>`;
-                return;
-            }
-
+            container.innerHTML = currentSchema.length === 0 ? '<div style="text-align:center; padding:30px; color:#94a3b8;">Belum ada input.</div>' : '';
             currentSchema.forEach((item, index) => {
                 const div = document.createElement('div');
-                div.style.cssText = "display:grid; grid-template-columns: 2fr 1fr 2fr 50px; gap:10px; margin-bottom:10px;";
+                div.style.display = 'grid';
+                div.style.gridTemplateColumns = '2fr 1.5fr 1.5fr 40px';
+                div.style.gap = '10px';
+                div.style.marginBottom = '10px';
                 div.innerHTML = `
-                    <input type="text" value="${item.label}" oninput="updateSchema(${index}, 'label', this.value)" class="form-input" placeholder="Label Input">
-                    <select onchange="updateSchema(${index}, 'type', this.value)" class="form-input">
-                        <option value="text" ${item.type==='text'?'selected':''}>Teks Pendek</option>
+                    <input type="text" value="${item.label}" oninput="updateSchema(${index}, 'label', this.value)" class="modern-input" placeholder="Label">
+                    <select onchange="updateSchema(${index}, 'type', this.value)" class="modern-input">
+                        <option value="text" ${item.type==='text'?'selected':''}>Teks</option>
                         <option value="textarea" ${item.type==='textarea'?'selected':''}>Paragraf</option>
                         <option value="date" ${item.type==='date'?'selected':''}>Tanggal</option>
-                        <option value="number" ${item.type==='number'?'selected':''}>Angka</option>
                     </select>
-                    <input type="text" value="${item.key}" oninput="updateSchemaKey(${index}, this.value)" class="form-input" placeholder="id_variable" style="font-family:monospace; color:#002BE8;">
-                    <button onclick="hapusSchema(${index})" class="btn-icon" style="background:#fee2e2; color:#ef4444; width:100%; height:auto;"><i class="fas fa-times"></i></button>
+                    <input type="text" value="${item.key}" oninput="updateSchemaKey(${index}, this.value)" class="modern-input" placeholder="Variable ID">
+                    <button onclick="hapusSchema(${index})" class="btn-icon btn-delete" style="width:100%;"><i class="fas fa-times"></i></button>
                 `;
                 container.appendChild(div);
             });
@@ -442,24 +283,78 @@
         function updateSchemaKey(idx, val) { currentSchema[idx]['key'] = val.replace(/[^a-zA-Z0-9_]/g, "").toLowerCase(); }
         function tambahBarisSchema() { currentSchema.push({ label: "", type: "text", key: "" }); renderSchemaList(); }
         function hapusSchema(idx) { currentSchema.splice(idx, 1); renderSchemaList(); }
-        
+
         async function simpanSchema() {
+            const isConfirm = await Swal.fire({
+                title: 'Simpan Konfigurasi?',
+                text: "Apakah Anda yakin konfigurasi form input khusus ini sudah benar?",
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#002BE8',
+                cancelButtonColor: '#94a3b8',
+                confirmButtonText: 'Ya, Simpan!',
+                cancelButtonText: 'Batal',
+                reverseButtons: true
+            });
+            if (!isConfirm.isConfirmed) return;
+
             const id = document.getElementById('idTypeTarget').value;
-            Swal.fire({ title: 'Menyimpan...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+            
+            Swal.fire({ 
+                title: 'Menyimpan...', 
+                html: 'Mohon tunggu sebentar.',
+                allowOutsideClick: false, 
+                didOpen: () => Swal.showLoading() 
+            });
+
             try {
                 const res = await fetch(`/api/types/${id}/schema`, {
-                    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+                    method: 'PUT', 
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ schema: JSON.stringify(currentSchema) })
                 });
-                if(res.ok) { Swal.fire('Berhasil', 'Konfigurasi tersimpan.', 'success').then(()=>location.reload()); }
-            } catch(e) { Swal.fire('Error', 'Gagal update.', 'error'); }
+
+                if (res.ok) {
+                    Swal.fire({ 
+                        icon: 'success', 
+                        title: 'Berhasil!', 
+                        text: 'Konfigurasi form berhasil diperbarui.',
+                        timer: 1500,
+                        showConfirmButton: false 
+                    }).then(() => location.reload());
+                } else {
+                    Swal.fire('Gagal', 'Terjadi kesalahan saat menyimpan data.', 'error');
+                }
+            } catch(e) { 
+                Swal.fire('Error', 'Gagal terhubung ke server.', 'error'); 
+            }
         }
-        
-        function logout() {
+
+        function hapusType(id) {
             Swal.fire({
-                title: 'Logout?', text: "Anda akan mengakhiri sesi.", icon: 'question',
-                showCancelButton: true, confirmButtonText: 'Ya, Logout', confirmButtonColor: '#ef4444', cancelButtonText: 'Batal'
-            }).then((res) => { if(res.isConfirmed) location.href='/logout'; });
+                title: 'Hapus Data?', text: "Data tidak bisa dikembalikan!", icon: 'warning', 
+                showCancelButton: true, confirmButtonColor: '#ef4444', confirmButtonText: 'Ya, Hapus'
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    await fetch(`/api/types/${id}`, { method: 'DELETE' });
+                    location.reload();
+                }
+            });
+        }
+
+     function logout() { 
+            Swal.fire({
+                title: 'Logout', 
+                text: "Apakah Anda yakin ingin mengakhiri sesi ini?", 
+                icon: 'question',
+                showCancelButton: true, 
+                cancelButtonText: 'Batal',
+                confirmButtonText: 'Ya', 
+                confirmButtonColor: '#ef4444',
+                reverseButtons: false
+            }).then((res) => { 
+                if (res.isConfirmed) window.location.href = '/logout'; 
+            });
         }
     </script>
 </body>

@@ -141,8 +141,8 @@
         // 1. LOGOUT
         function logout() {
             Swal.fire({
-                title: 'Keluar?', text: "Akhiri sesi ini?", icon: 'question',
-                showCancelButton: true, confirmButtonText: 'Logout', confirmButtonColor: '#ef4444'
+                title: 'Logout', text: "Apakah Anda yakin ingin mengakhiri sesi ini?", icon: 'question',
+                showCancelButton: true, confirmButtonText: 'Ya', confirmButtonColor: '#ef4444'
             }).then((res) => { if (res.isConfirmed) window.location.href = '/logout'; });
         }
 

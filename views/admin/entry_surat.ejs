@@ -7,7 +7,6 @@
     
     <link rel="stylesheet" href="/css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body>
@@ -33,14 +32,12 @@
                             <div class="form-group">
                                 <label class="form-label">Pengirim (Instansi Luar)</label>
                                 <div class="input-wrapper">
-                                    
                                     <input type="text" name="external_sender" class="form-input" placeholder="Contoh: Polres Bukittinggi..." required>
                                 </div>
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Nomor Surat (Asli)</label>
                                 <div class="input-wrapper">
-                                    
                                     <input type="text" name="letter_number" class="form-input" placeholder="Nomor surat asli..." required>
                                 </div>
                             </div>
@@ -50,7 +47,6 @@
                             <div class="form-group">
                                 <label class="form-label">Tanggal Surat</label>
                                 <div class="input-wrapper">
-                                    
                                     <input type="date" name="letter_date" class="form-input" required>
                                 </div>
                             </div>
@@ -67,7 +63,6 @@
                                             <option value="Kabid TIK">Kabid TIK</option>
                                         <% } %>
                                     </select>
-                                    <i  style="position:absolute; right:15px; top:50%; transform:translateY(-50%); color:#94a3b8; pointer-events:none;"></i>
                                 </div>
                             </div>
                         </div>
@@ -80,26 +75,36 @@
                         </div>
 
                         <div style="grid-column: 1 / -1;" class="grid-span-mobile">
-                            <label class="form-label" style="font-size: 14px; margin-bottom: 12px;">Upload File Scan (PDF)</label>
+                            <label class="form-label" style="font-size: 14px; margin-bottom: 12px;">Upload File Scan (PDF/Gambar)</label>
                             
-                            <div class="file-upload-wrapper">
+                            <div class="file-upload-wrapper" onclick="document.getElementById('fileInput').click()" style="cursor:pointer; border: 2px dashed #cbd5e1; padding: 30px; border-radius: 12px; text-align: center; transition: all 0.3s;">
                                 <i class="fas fa-file-pdf" style="font-size: 48px; color: #94a3b8; margin-bottom: 15px;"></i>
                                 
                                 <div id="fileName" style="font-size: 16px; font-weight: 600; color: #334155;">
-                                    Klik area ini untuk memilih file PDF
+                                    Klik area ini untuk memilih file
                                 </div>
                                 
-                                <div style="font-size: 13px; color: #94a3b8; margin-top: 5px; background: #e2e8f0; padding: 4px 12px; border-radius: 20px;">
-                                    <i class="fas fa-info-circle"></i> Maksimal 10 MB
+                                <div style="font-size: 13px; color: #94a3b8; margin-top: 5px; background: #e2e8f0; padding: 4px 12px; border-radius: 20px; display: inline-block;">
+                                    <i class="fas fa-info-circle"></i> Maksimal 50 MB (PDF/JPG/PNG)
                                 </div>
 
-                                <input type="file" name="file_scan" id="fileInput" accept="application/pdf" required onchange="showFileName(this)">
+                                <input type="file" name="file_scan" id="fileInput" accept=".pdf, .jpg, .jpeg, .png" required onchange="tampilkanPreview(this)" style="display:none;">
+                            </div>
+
+                            <div id="boxPreview" style="display:none; margin-top:15px; background:#f8fafc; border:2px dashed #cbd5e1; border-radius:8px; padding:15px;">
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                                    <span style="font-weight:bold; color:#0f172a;"><i class="fas fa-eye"></i> Pratinjau Dokumen</span>
+                                    <button type="button" onclick="hapusPreview()" style="background:none; border:none; color:#ef4444; cursor:pointer; font-size:12px; font-weight:bold;">
+                                        <i class="fas fa-times"></i> Hapus / Ganti
+                                    </button>
+                                </div>
+                                <div id="previewContent" style="width: 100%; min-height: 400px; text-align: center;"></div>
                             </div>
                         </div>
 
                     </div>
 
-                    <button type="submit" class="btn-save">
+                    <button type="submit" class="btn-save" style="margin-top: 25px; width: 100%; padding: 15px; background: #002BE8; color: white; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px;">
                         <i class="fas fa-cloud-upload-alt"></i> SIMPAN SURAT MASUK
                     </button>
                 </form>
@@ -110,35 +115,96 @@
     </div>
 
     <script>
-        function showFileName(input) {
+        // FUNGSI PREVIEW FILE
+        function tampilkanPreview(input) {
             const fileNameDisplay = document.getElementById('fileName');
-            const icon = document.querySelector('.file-upload-wrapper i'); // Ambil icon
+            const icon = document.querySelector('.file-upload-wrapper i'); 
+            const wrapper = document.querySelector('.file-upload-wrapper');
+            const box = document.getElementById('boxPreview');
+            const content = document.getElementById('previewContent');
             
             if (input.files && input.files[0]) {
-                // Jika file dipilih, ubah teks dan warna icon
-                fileNameDisplay.innerHTML = `<span style="color:#002BE8; font-weight:700;">${input.files[0].name}</span>`;
-                icon.style.color = "#e11d48"; // Merah PDF
-                icon.className = "fas fa-file-pdf"; 
+                const file = input.files[0];
+
+                // Validasi Ukuran
+                if (file.size > 50 * 1024 * 1024) {
+                    Swal.fire('File Terlalu Besar', 'Maksimal ukuran file adalah 50MB', 'warning');
+                    input.value = "";
+                    return;
+                }
+
+                // Update Tampilan Input
+                fileNameDisplay.innerHTML = `<span style="color:#002BE8; font-weight:700;">${file.name}</span>`;
+                icon.style.color = "#e11d48"; 
+                wrapper.style.borderColor = "#002BE8";
+                wrapper.style.background = "#eff6ff";
+
+                // Tampilkan Preview
+                const fileURL = URL.createObjectURL(file);
+                const fileType = file.type;
+
+                box.style.display = 'block';
+                content.innerHTML = ''; 
+
+                if (fileType === 'application/pdf') {
+                    const embed = document.createElement('embed');
+                    embed.src = fileURL;
+                    embed.type = 'application/pdf';
+                    embed.style.width = '100%';
+                    embed.style.height = '500px';
+                    embed.style.border = '1px solid #e2e8f0';
+                    embed.style.borderRadius = '6px';
+                    content.appendChild(embed);
+                } else if (fileType.startsWith('image/')) {
+                    const img = document.createElement('img');
+                    img.src = fileURL;
+                    img.style.maxWidth = '100%';
+                    img.style.maxHeight = '500px';
+                    img.style.borderRadius = '6px';
+                    img.style.boxShadow = '0 4px 6px -1px rgb(0 0 0 / 0.1)';
+                    content.appendChild(img);
+                } else {
+                    content.innerHTML = '<p style="padding:20px; color:#64748b;">Preview tidak tersedia untuk tipe file ini.</p>';
+                }
+
             } else {
-                fileNameDisplay.innerText = "Klik area ini untuk memilih file PDF";
-                icon.style.color = "#94a3b8"; // Abu-abu
+                hapusPreview();
             }
         }
 
-        // --- HANDLER SUBMIT ---
+        function hapusPreview() {
+            const input = document.getElementById('fileInput');
+            const fileNameDisplay = document.getElementById('fileName');
+            const icon = document.querySelector('.file-upload-wrapper i'); 
+            const wrapper = document.querySelector('.file-upload-wrapper');
+            const box = document.getElementById('boxPreview');
+
+            input.value = ''; 
+            box.style.display = 'none';
+            
+            fileNameDisplay.innerText = "Klik area ini untuk memilih file";
+            icon.style.color = "#94a3b8"; 
+            wrapper.style.borderColor = "#cbd5e1";
+            wrapper.style.background = "transparent";
+        }
+
         document.getElementById('formIncoming').addEventListener('submit', async function(e) {
             e.preventDefault();
             const formData = new FormData(this);
             
             Swal.fire({
                 title: 'Mengupload...',
-                html: 'Mohon tunggu, sedang menyimpan data.',
+                html: 'Mohon tunggu, sedang menyimpan data ke server.',
                 allowOutsideClick: false,
                 didOpen: () => { Swal.showLoading(); }
             });
             
             try {
-                const res = await fetch('/api/letters/incoming', { method: 'POST', body: formData });
+                // Pastikan endpoint API backend Anda benar (/api/letters/incoming)
+                const res = await fetch('/api/letters/incoming', { 
+                    method: 'POST', 
+                    body: formData 
+                });
                 const result = await res.json();
 
                 if(res.ok) { 
@@ -147,9 +213,9 @@
                         title: 'Berhasil!',
                         text: result.message,
                         confirmButtonText: 'Selesai'
-                    }).then(() => { window.location.reload(); });
+                    }).then(() => { window.location.href = '/admin/surat-masuk'; }); // Redirect ke list surat masuk
                 } else {
-                    Swal.fire('Gagal', result.message || "Error", 'error');
+                    Swal.fire('Gagal', result.message || "Terjadi kesalahan saat menyimpan.", 'error');
                 }
             } catch (error) {
                 Swal.fire('Error', 'Gagal koneksi server.', 'error');
@@ -158,7 +224,7 @@
         
         function logout() { 
             Swal.fire({
-                title: 'Keluar?', text: "Akhiri sesi ini?", icon: 'question',
+                title: 'Logout', text: "Apakah Anda yakin ingin mengakhiri sesi ini?", icon: 'question',
                 showCancelButton: true, confirmButtonText: 'Ya', cancelButtonText: 'Batal', confirmButtonColor: '#ef4444'
             }).then((res) => { if (res.isConfirmed) window.location.href = '/logout'; });
         }

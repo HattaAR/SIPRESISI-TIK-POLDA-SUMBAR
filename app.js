@@ -19,32 +19,23 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// KONFIGURASI UPLOAD (MULTER)
-const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        const dir = path.join(__dirname, 'public/uploads'); 
-        if (!fs.existsSync(dir)){
-            fs.mkdirSync(dir, { recursive: true });
-        }
-        cb(null, dir);
-    },
-    filename: function (req, file, cb) {
-        const safeName = file.originalname.replace(/\s+/g, '_');
-        cb(null, Date.now() + '-' + safeName);
-    }
-});
+//upload(multer)
+const storage = multer.memoryStorage();
 
 const upload = multer({ 
     storage: storage,
-    limits: { fileSize: 10 * 1024 * 1024 }, 
+    limits: { fileSize: 50 * 1024 * 1024 }, 
     fileFilter: (req, file, cb) => {
-        if (
-            file.mimetype === 'application/pdf' || 
-            file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-        ) {
+        const allowedMimeTypes = [
+            'application/pdf',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'application/msword'
+        ];
+
+        if (allowedMimeTypes.includes(file.mimetype)) {
             cb(null, true);
         } else {
-            cb(new Error('Hanya format PDF (Surat Masuk) dan DOCX (Template) yang diperbolehkan!'));
+            cb(new Error('Hanya format PDF (Surat Masuk) dan DOCX (Template) yang diperbolehkan!'), false);
         }
     }
 });
@@ -136,6 +127,7 @@ app.post('/api/auth/login', (req, res) => {
 
         const user = results[0];
 
+        // CEK is_active (1 = Aktif, 0 = Nonaktif)
         if (user.is_active === 0) {
             return res.status(403).json({ message: "Akun Anda telah dinonaktifkan oleh Admin." });
         }
@@ -164,21 +156,31 @@ app.get('/logout', (req, res) => {
 // API AMBIL DAFTAR USER
 
 app.get('/api/users', verifyToken, (req, res) => {
-    const role = req.query.role;
-    let sql = "SELECT id, full_name, nrp, role FROM users";
+    const { role, status } = req.query;
+    let sql = "SELECT id, full_name, nrp, role, status FROM users";
     let params = [];
+    let conditions = [];
 
-    if(role) {
-        sql += " WHERE role = ?";
-        params.push(role); 
+    if (role) {
+        conditions.push("role = ?");
+        params.push(role);
+    }
+
+    if (status) {
+        conditions.push("status = ?");
+        params.push(status);
+    }
+
+    if (conditions.length > 0) {
+        sql += " WHERE " + conditions.join(" AND ");
     }
 
     sql += " ORDER BY full_name ASC";
 
     db.query(sql, params, (err, results) => {
-        if(err) {
+        if (err) {
             console.error("Gagal ambil data user:", err);
-            return res.status(500).json([]); 
+            return res.status(500).json([]);
         }
         res.json(results);
     });
@@ -190,14 +192,12 @@ app.get('/api/users', verifyToken, (req, res) => {
 
 app.get('/staff/dashboard', verifyToken, (req, res) => {
     db.query('SELECT * FROM users WHERE id = ?', [req.user.id], (err, userResult) => {
-        if (err || userResult.length === 0) {
-            console.error("User not found or DB error");
-            return res.redirect('/logout');
-        }
+        if (err || userResult.length === 0) return res.redirect('/logout');
         
         const freshUser = userResult[0]; 
 
-        const sql = `
+        
+        const sqlStats = `
             SELECT 
                 SUM(CASE WHEN status = 'DRAFT' THEN 1 ELSE 0 END) as draft,
                 SUM(CASE WHEN status = 'PENDING' THEN 1 ELSE 0 END) as pending,
@@ -206,29 +206,36 @@ app.get('/staff/dashboard', verifyToken, (req, res) => {
             FROM letters WHERE user_id = ?
         `;
 
-        db.query(sql, [req.user.id], (err, result) => {
+        db.query(sqlStats, [req.user.id], (err, resultStats) => {
             if (err) {
-                console.error("Stat error:", err);
-                return res.render('staff/dashboard', { 
-                    title: 'Dashboard Staff', page: 'dashboard', 
-                    user: freshUser, stats: {}, activities: [] 
-                });
+                console.error(err);
+                return res.render('staff/dashboard', { title: 'Dashboard', user: freshUser, stats: {}, letters: [] });
             }
 
-            const activitySql = `SELECT * FROM letters WHERE user_id = ? ORDER BY created_at DESC LIMIT 5`;
             
-            db.query(activitySql, [req.user.id], (err, activities) => {
+            const sqlActivity = `
+                SELECT l.*, IFNULL(lt.name, 'Surat Umum') as type_name, lt.code_prefix
+                FROM letters l
+                LEFT JOIN letter_types lt ON l.type_id = lt.id  -- Gunakan type_id
+                WHERE l.user_id = ?
+                ORDER BY l.created_at DESC
+                LIMIT 5
+            `;
+            
+            db.query(sqlActivity, [req.user.id], (err2, activities) => {
+                if (err2) console.error("Error Activity:", err2);
+
                 res.render('staff/dashboard', {
                     title: 'Dashboard Staff',
                     page: 'dashboard',
                     user: freshUser,      
-                    stats: result[0],     
+                    stats: resultStats[0] || {},     
                     letters: activities || []
                 });
             }); 
         }); 
     }); 
-}); 
+});
 
 app.get('/staff/create', verifyToken, (req, res) => {
     db.query('SELECT * FROM users WHERE id = ?', [req.user.id], (err, userResult) => {
@@ -335,75 +342,10 @@ app.delete('/api/letters/:id', verifyToken, (req, res) => {
     });
 });
 
-app.get('/api/letters/:id/download', verifyToken, (req, res) => {
-    console.log(`[DOWNLOAD] Request ID: ${req.params.id} oleh User: ${req.user.name}`);
 
-    const sql = `
-        SELECT l.*, t.template_path, t.name as type_name, t.code_prefix
-        FROM letters l 
-        JOIN letter_types t ON l.type_id = t.id 
-        WHERE l.id = ?
-    `;
-    
-    db.query(sql, [req.params.id], (err, results) => {
-        if (err) return res.status(500).send("Database Error: " + err.message);
-        if (results.length === 0) return res.status(404).send("Surat tidak ditemukan di Database.");
-        
-        const surat = results[0];
-        
-        if ((surat.status || '').toUpperCase() !== 'APPROVED') {
-            return res.status(403).send(`Status surat masih '${surat.status}'. Hanya surat APPROVED yang bisa didownload.`);
-        }
-        
-        if (!surat.template_path) {
-            return res.status(500).send("Admin belum mengupload file template.");
-        }
-        
-        const templatePath = path.resolve(__dirname, 'uploads', surat.template_path);
-        
-        if (!fs.existsSync(templatePath)) {
-            return res.status(500).send("File template fisik tidak ditemukan di server.");
-        }
 
-        try {
-            const content = fs.readFileSync(templatePath, 'binary');
-            const zip = new PizZip(content);
-            const doc = new Docxtemplater(zip, { 
-                paragraphLoop: true, 
-                linebreaks: true,
-                nullGetter: () => "" 
-            });
 
-            let rawData = {};
-            try { rawData = JSON.parse(surat.content_data); } catch(e) { rawData = {}; }
 
-            let cleanData = {};
-            Object.keys(rawData).forEach(key => {
-                const cleanKey = key.replace(/[{}]/g, "").trim();
-                cleanData[cleanKey] = rawData[key];
-            });
-
-            cleanData.nomor_surat = surat.letter_number;
-            cleanData.kode_surat = surat.code_prefix;
-            cleanData.tanggal_surat = new Date(surat.updated_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
-            cleanData.hari_ini = new Date().toLocaleDateString('id-ID', { weekday: 'long' });
-            cleanData.tahun = new Date().getFullYear();
-
-            doc.render(cleanData);
-
-            const buf = doc.getZip().generate({ type: "nodebuffer", compression: "DEFLATE" });
-            const safeName = (surat.letter_number || 'surat').replace(/[^a-zA-Z0-9]/g, '_');
-            
-            res.setHeader("Content-Disposition", `attachment; filename=${safeName}.docx`);
-            res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
-            res.send(buf);
-
-        } catch (error) {
-            console.error("[TEMPLATE ERROR]", error);
-            res.status(500).send("Gagal generate dokumen: " + error.message);
-        }
-    });
-});
 
 app.post('/api/letters/update', verifyToken, (req, res) => {
     const { id, type_id, subject, ...contentData } = req.body;
@@ -703,14 +645,14 @@ app.get('/staff/dispositions', verifyToken, (req, res) => {
 
             const totalItems = countResult[0].total;
             const totalPages = Math.ceil(totalItems / limit);
-
             const sql = `
                 SELECT d.*, 
                        l.subject, 
                        l.letter_number, 
                        l.external_sender, 
+                       l.pdf_path,
                        u.full_name as pimpinan_name,
-                       (LENGTH(l.content_data) > 0) as ada_file 
+                       (LENGTH(l.content_data) > 0 OR l.pdf_path IS NOT NULL) as ada_file 
                 FROM dispositions d
                 JOIN letters l ON d.letter_id = l.id
                 JOIN users u ON d.sender_id = u.id
@@ -751,12 +693,17 @@ app.post('/api/dispositions/:id/complete', verifyToken, (req, res) => {
         const letterId = results[0].letter_id;
 
         db.query("UPDATE dispositions SET status = 'COMPLETED' WHERE id = ?", [dispositionId], (err2) => {
-            if (err2) return res.status(500).json({ message: "Database error" });
+            if (err2) return res.status(500).json({ message: "Database error saat update disposisi" });
 
             db.query("UPDATE letters SET status = 'COMPLETED' WHERE id = ?", [letterId], (err3) => {
-                if (err3) return res.status(500).json({ message: "Gagal update status surat" });
+                if (err3) {
+                    console.error("Error Letter Status:", err3);
+                    return res.status(500).json({ message: "Gagal update status surat utama" });
+                }
 
-                logActivity(userId, 'COMPLETE_TASK', `Menyelesaikan tugas disposisi (Letter ID: ${letterId})`, req);
+                if (typeof logActivity === 'function') {
+                    logActivity(userId, 'COMPLETE_TASK', `Menyelesaikan tugas disposisi (Letter ID: ${letterId})`, req);
+                }
 
                 res.json({ message: "Tugas berhasil diselesaikan! Status surat diperbarui." });
             });
@@ -764,128 +711,90 @@ app.post('/api/dispositions/:id/complete', verifyToken, (req, res) => {
     });
 });
 
-app.get('/download-surat/:id', verifyToken, (req, res) => {
-    const id = req.params.id;
 
-    const sql = `
-        SELECT l.*, t.template_path, t.name as type_name, t.code_prefix
-        FROM letters l 
-        LEFT JOIN letter_types t ON l.type_id = t.id 
-        WHERE l.id = ?
-    `;
-
-    db.query(sql, [id], (err, results) => {
-        if (err) return res.status(500).send("Database Error");
-        if (results.length === 0) return res.status(404).send("Surat tidak ditemukan");
-        
-        const surat = results[0];
-        const cleanSubject = (surat.subject || 'dokumen').replace(/[^a-zA-Z0-9]/g, "_");
-
-        if (surat.template_path && surat.origin_type !== 'EXTERNAL') {
-            try {
-                const templatePath = path.resolve(__dirname, 'uploads', surat.template_path);
-                
-                if (!fs.existsSync(templatePath)) {
-                    return res.status(500).send(`Error: File Template '${surat.template_path}' hilang dari server.`);
-                }
-
-                const content = fs.readFileSync(templatePath, 'binary');
-                const zip = new PizZip(content);
-                const doc = new Docxtemplater(zip, { 
-                    paragraphLoop: true, 
-                    linebreaks: true,
-                    nullGetter: () => "" 
-                });
-
-                let rawData = {};
-                try { rawData = JSON.parse(surat.content_data); } catch(e) { rawData = {}; }
-
-                let cleanData = {};
-                if (rawData) {
-                    Object.keys(rawData).forEach(key => {
-                        const cleanKey = key.replace(/[{}]/g, "").trim();
-                        cleanData[cleanKey] = rawData[key];
-                    });
-                }
-
-                cleanData.nomor_surat = surat.letter_number || 'DRAFT';
-                cleanData.kode_surat = surat.code_prefix;
-                cleanData.tanggal_surat = new Date(surat.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
-                cleanData.tahun = new Date().getFullYear();
-
-                doc.render(cleanData);
-
-                const buf = doc.getZip().generate({ type: "nodebuffer", compression: "DEFLATE" });
-
-                res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
-                res.setHeader("Content-Disposition", `attachment; filename="${cleanSubject}.docx"`);
-                res.send(buf);
-
-            } catch (error) {
-                console.error("[GENERATE ERROR]", error);
-                return res.status(500).send("Gagal membuat dokumen: " + error.message);
-            }
-
-        } else {
-            if (!surat.content_data) return res.status(404).send("File fisik belum diunggah.");
-
-            let fileData = surat.content_data;
-            if (!Buffer.isBuffer(fileData)) fileData = Buffer.from(fileData);
-
-            const header = fileData.slice(0, 4).toString('hex').toLowerCase();
-            let contentType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'; 
-            let extension = 'docx';
-            let disposition = 'attachment';
-
-            if (header === '25504446') { 
-                contentType = 'application/pdf'; extension = 'pdf'; disposition = 'inline';
-            } 
-            
-            res.setHeader('Content-Type', contentType);
-            res.setHeader('Content-Disposition', `${disposition}; filename="${cleanSubject}.${extension}"`);
-            res.send(fileData);
-        }
-    });
-});
 
 
 // AREA ADMIN
 app.get('/admin/dashboard', verifyToken, (req, res) => {
     db.query('SELECT * FROM users WHERE id = ?', [req.user.id], (err, userResult) => {
-        if(err || userResult.length === 0) return res.redirect('/logout');
+        if (err || userResult.length === 0) return res.redirect('/logout');
         
-        const freshUser = userResult[0]; 
+        const currentUser = userResult[0]; 
 
         const sqlStats = `
             SELECT 
-                (SELECT COUNT(*) FROM users) as total_users,
+                (SELECT COUNT(*) FROM users WHERE role != 'admin') as total_users,
                 (SELECT COUNT(*) FROM letter_types) as total_types,
                 (SELECT COUNT(*) FROM letters) as total_letters,
-                (SELECT COUNT(*) FROM letters WHERE status = 'APPROVED') as total_archive
+                (SELECT COUNT(*) FROM letters WHERE status = 'COMPLETED') as total_archived
         `;
 
-        db.query(sqlStats, (err, statResult) => {
-            if(err) console.error("Stats Error:", err);
-            const stats = statResult[0];
+        db.query(sqlStats, (err2, statsResult) => {
+            if (err2) {
+                console.error(err2);
+                return res.render('admin/dashboard', { 
+                    title: 'Dashboard Admin', 
+                    page: 'dashboard', 
+                    user: currentUser, 
+                    stats: {}, 
+                    logs: [] 
+                });
+            }
 
-            const sqlLogs = `
-                SELECT l.*, u.full_name as sender_name, t.name as type_name
-                FROM letters l
-                LEFT JOIN users u ON l.user_id = u.id
-                LEFT JOIN letter_types t ON l.type_id = t.id
-                ORDER BY l.created_at DESC
-                LIMIT 5
+            const sqlActivity = `
+                SELECT * FROM (
+                    SELECT 
+                        l.id as ref_id,
+                        l.created_at as activity_time,
+                        u.full_name as actor_name,
+                        u.role as actor_role,
+                        CASE 
+                            WHEN l.status = 'DRAFT' THEN 'Membuat Surat Baru'
+                            WHEN l.status = 'PENDING' THEN 'Mengirim Surat (Menunggu Persetujuan)'
+                            WHEN l.status = 'APPROVED' THEN 'Menyetujui Surat'
+                            WHEN l.status = 'REJECTED' THEN 'Menolak Surat'
+                            ELSE 'Update Status Surat'
+                        END as activity_type,
+                        l.subject as description,
+                        l.status as status_badge,
+                        l.external_sender,
+                        l.letter_number
+                    FROM letters l
+                    LEFT JOIN users u ON l.user_id = u.id
+
+                    UNION ALL
+
+                    SELECT 
+                        d.id as ref_id,
+                        d.created_at as activity_time,
+                        sender.full_name as actor_name,
+                        sender.role as actor_role,
+                        CASE 
+                            WHEN d.status = 'PENDING' THEN 'Melakukan Disposisi'
+                            WHEN d.status = 'COMPLETED' THEN 'Menyelesaikan Tugas Disposisi'
+                            ELSE 'Aktivitas Disposisi'
+                        END as activity_type,
+                        l.subject as description,
+                        d.status as status_badge,
+                        l.external_sender,
+                        l.letter_number
+                    FROM dispositions d
+                    LEFT JOIN letters l ON d.letter_id = l.id
+                    LEFT JOIN users sender ON d.sender_id = sender.id
+                ) AS combined_logs
+                ORDER BY activity_time DESC
+                LIMIT 10
             `;
 
-            db.query(sqlLogs, (err, logs) => {
-                if(err) console.error("Logs Error:", err);
+            db.query(sqlActivity, (err3, activities) => {
+                if (err3) console.error(err3);
 
                 res.render('admin/dashboard', {
                     title: 'Dashboard Admin',
                     page: 'dashboard',
-                    user: freshUser, 
-                    stats: stats,
-                    logs: logs || []
+                    user: currentUser, 
+                    stats: statsResult[0],
+                    logs: activities || []
                 });
             });
         });
@@ -909,41 +818,55 @@ app.get('/admin/users', verifyToken, (req, res) => {
     });
 });
 
-app.post('/api/users', upload.none(), verifyToken, (req, res) => {
+app.post('/api/users', verifyToken, async (req, res) => {
     const { full_name, username, nrp, password, role } = req.body;
 
     if (!full_name || !username || !password || !role) {
         return res.status(400).json({ message: "Data tidak lengkap" });
     }
 
-    const hash = bcrypt.hashSync(password, 10);
+    try {
+        const hash = await bcrypt.hash(password, 10);
+        const sql = "INSERT INTO users (full_name, username, nrp, password_hash, role, is_active) VALUES (?, ?, ?, ?, ?, 1)";
+        
+        db.query(sql, [full_name, username, nrp, hash, role], (err, result) => {
+            if (err) {
+                if (err.code === 'ER_DUP_ENTRY') return res.status(400).json({ message: "Username/NRP sudah digunakan" });
+                return res.status(500).json({ message: "Error database" });
+            }
 
-    db.query("INSERT INTO users (full_name, username, nrp, password_hash, role, is_active) VALUES (?, ?, ?, ?, ?, 1)", 
-        [full_name, username, nrp, hash, role], 
-        (err) => {
-            if (err) return res.status(500).json({ message: "Username sudah digunakan atau error database" });
+            logActivity(req.user.id, 'CREATE_USER', `Menambahkan user baru: ${username} (${role})`, req);
             res.json({ message: "Sukses menambahkan user" });
-        }
-    );
+        });
+    } catch (e) {
+        res.status(500).json({ message: "Server error saat hashing" });
+    }
 });
 
 app.put('/api/users/:id', verifyToken, async (req, res) => {
     const { full_name, username, nrp, role, password } = req.body;
     const userId = req.params.id;
+
     if (!full_name || !username || !role) return res.status(400).json({ message: "Data tidak lengkap" });
 
     try {
         if (password && password.trim() !== "") {
             const hash = await bcrypt.hash(password, 10);
             const sql = "UPDATE users SET full_name=?, username=?, nrp=?, role=?, password_hash=? WHERE id=?";
+            
             db.query(sql, [full_name, username, nrp, role, hash, userId], (err) => {
-                if (err) return res.status(500).json({ message: "Gagal update" });
+                if (err) return res.status(500).json({ message: "Gagal update database" });
+                
+                logActivity(req.user.id, 'UPDATE_USER', `Mengupdate data & password user ID: ${userId}`, req);
                 res.json({ message: "Data user & password berhasil diperbarui!" });
             });
         } else {
             const sql = "UPDATE users SET full_name=?, username=?, nrp=?, role=? WHERE id=?";
+            
             db.query(sql, [full_name, username, nrp, role, userId], (err) => {
-                if (err) return res.status(500).json({ message: "Gagal update" });
+                if (err) return res.status(500).json({ message: "Gagal update database" });
+
+                logActivity(req.user.id, 'UPDATE_USER', `Mengupdate data user ID: ${userId}`, req);
                 res.json({ message: "Data user berhasil diperbarui!" });
             });
         }
@@ -952,18 +875,31 @@ app.put('/api/users/:id', verifyToken, async (req, res) => {
     }
 });
 
-app.put('/api/users/:id/toggle-status', verifyToken, (req, res) => {
+app.put('/api/users/:id/status', verifyToken, (req, res) => {
+    if (req.user.role !== 'admin' && req.user.role !== 'kasubbag') {
+        return res.status(403).json({ message: "Akses ditolak!" });
+    }
+
+    const userId = req.params.id;
     const sql = "UPDATE users SET is_active = NOT is_active WHERE id = ?";
-    db.query(sql, [req.params.id], (err) => {
-        if (err) return res.status(500).json({ message: "Gagal" });
+
+    db.query(sql, [userId], (err, result) => {
+        if (err) return res.status(500).json({ message: "Gagal update status" });
+        if (result.affectedRows === 0) return res.status(404).json({ message: "User tidak ditemukan" });
+
+        logActivity(req.user.id, 'UPDATE_USER_STATUS', `Mengubah status aktif user ID: ${userId}`, req);
         res.json({ message: "Status akun berhasil diubah!" });
     });
 });
 
 app.delete('/api/users/:id', verifyToken, (req, res) => {
+    if (req.params.id == req.user.id) return res.status(400).json({ message: "Tidak bisa menghapus akun sendiri" });
+    
     db.query("DELETE FROM users WHERE id = ?", [req.params.id], (err) => {
         if (err) return res.status(500).json({ message: "Gagal hapus" });
-        res.json({ message: "Terhapus" });
+
+        logActivity(req.user.id, 'DELETE_USER', `Menghapus user ID: ${req.params.id}`, req);
+        res.json({ message: "User berhasil dihapus permanen" });
     });
 });
 
@@ -986,15 +922,29 @@ app.get('/admin/types', verifyToken, (req, res) => {
 
 app.post('/api/types', verifyToken, upload.single('template_file'), (req, res) => {
     const { name, code_prefix, form_schema, letter_number_format } = req.body; 
-    const templateFilename = req.file ? req.file.filename : null;
 
-    if (!templateFilename) return res.status(400).json({ message: "Wajib upload file template .docx!" });
-    
-    const sql = "INSERT INTO letter_types (name, code_prefix, letter_number_format, form_schema, template_path) VALUES (?, ?, ?, ?, ?)";
-    db.query(sql, [name, code_prefix, letter_number_format, form_schema, templateFilename], (err) => {
-        if (err) return res.status(500).json({ message: "Gagal menyimpan" });
-        res.json({ message: "Sukses!" });
-    });
+    if (!req.file) {
+        return res.status(400).json({ message: "Wajib upload file template .docx!" });
+    }
+
+    const fileName = Date.now() + '-' + req.file.originalname.replace(/\s+/g, '_');
+    const uploadDir = path.join(process.cwd(), 'public', 'uploads');
+
+    if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+    }
+
+    try {
+        fs.writeFileSync(path.join(uploadDir, fileName), req.file.buffer);
+
+        const sql = "INSERT INTO letter_types (name, code_prefix, letter_number_format, form_schema, template_path) VALUES (?, ?, ?, ?, ?)";
+        db.query(sql, [name, code_prefix, letter_number_format, form_schema, fileName], (err) => {
+            if (err) return res.status(500).json({ message: "Gagal menyimpan ke database" });
+            res.json({ message: "Sukses!" });
+        });
+    } catch (error) {
+        res.status(500).json({ message: "Gagal menyimpan file ke server" });
+    }
 });
 
 app.put('/api/types/:id/schema', verifyToken, (req, res) => {
@@ -1008,6 +958,34 @@ app.delete('/api/types/:id', verifyToken, (req, res) => {
     db.query("DELETE FROM letter_types WHERE id = ?", [req.params.id], (err) => {
         if(err) return res.status(500).json({message: "Gagal"});
         res.json({message: "Terhapus"});
+    });
+});
+
+
+app.put('/api/types/:id', verifyToken, upload.single('template_file'), (req, res) => {
+    const { name, code_prefix, letter_number_format } = req.body;
+    const typeId = req.params.id;
+
+    let sql = "UPDATE letter_types SET name = ?, code_prefix = ?, letter_number_format = ? WHERE id = ?";
+    let params = [name, code_prefix, letter_number_format, typeId];
+
+    if (req.file) {
+        const fileName = Date.now() + '-' + req.file.originalname.replace(/\s+/g, '_');
+        const uploadDir = path.join(process.cwd(), 'public', 'uploads');
+        if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+        
+        try {
+            fs.writeFileSync(path.join(uploadDir, fileName), req.file.buffer);
+            sql = "UPDATE letter_types SET name = ?, code_prefix = ?, letter_number_format = ?, template_path = ? WHERE id = ?";
+            params = [name, code_prefix, letter_number_format, fileName, typeId];
+        } catch (err) {
+            return res.status(500).json({ message: "Gagal menyimpan file baru" });
+        }
+    }
+
+    db.query(sql, params, (err) => {
+        if (err) return res.status(500).json({ message: "Gagal update database" });
+        res.json({ message: "Jenis surat berhasil diperbarui!" });
     });
 });
 
@@ -1097,7 +1075,7 @@ app.get('/admin/archive', verifyToken, (req, res) => {
 
             const sql = `
                 SELECT l.id, l.letter_number, l.subject, l.created_at, l.origin_type, 
-                       l.content_data,
+                       l.content_data,l.pdf_path,
                        t.name as type_name, u.full_name as pengirim
                 FROM letters l
                 LEFT JOIN letter_types t ON l.type_id = t.id
@@ -1144,27 +1122,49 @@ app.get('/admin/incoming-mail', verifyToken, (req, res) => {
 });
 
 app.post('/api/letters/incoming', verifyToken, upload.single('file_scan'), (req, res) => {
-    if (!req.file) return res.status(400).json({ message: "Wajib upload file PDF!" });
+    if (!req.file || !req.file.buffer) {
+        return res.status(400).json({ 
+            message: "Gagal: File PDF tidak terdeteksi atau kosong. Pastikan form memiliki enctype='multipart/form-data'." 
+        });
+    }
 
     const { letter_number, external_sender, subject, letter_date, recipient } = req.body;
+    
+    const fileName = `surat_masuk_${Date.now()}.pdf`;
 
-    if (!recipient) return res.status(400).json({ message: "Wajib memilih Pimpinan Tujuan!" });
+   
+    const uploadPath = path.join(__dirname, 'public', 'uploads', fileName);
 
-    const fileContent = req.file.buffer ? req.file.buffer : require('fs').readFileSync(req.file.path);
+    try {
+        
+        fs.writeFileSync(uploadPath, req.file.buffer);
+    } catch (error) {
+        console.error("Gagal menyimpan file fisik:", error);
+        return res.status(500).json({ message: "Gagal menyimpan file PDF ke folder server." });
+    }
 
+    
     const sql = `
         INSERT INTO letters 
-        (user_id, letter_number, external_sender, recipient, subject, letter_date, origin_type, status, content_data)
-        VALUES (?, ?, ?, ?, ?, ?, 'EXTERNAL', 'APPROVED', ?)
+        (user_id, type_id, letter_number, external_sender, recipient, subject, letter_date, origin_type, status, pdf_path)
+        VALUES (?, NULL, ?, ?, ?, ?, ?, 'EXTERNAL', 'APPROVED', ?)
     `;
 
-    db.query(sql, [req.user.id, letter_number, external_sender, recipient, subject, letter_date, fileContent], (err) => {
+    
+    db.query(sql, [req.user.id, letter_number, external_sender, recipient, subject, letter_date, fileName], (err) => {
         if (err) {
-            console.error(err);
-            return res.status(500).json({ message: "Gagal menyimpan data database" });
+            console.error("Database Error Detail:", err);
+            
+            
+            if (fs.existsSync(uploadPath)) fs.unlinkSync(uploadPath);
+
+            return res.status(500).json({ message: "Gagal menyimpan ke database: " + err.message });
         }
 
-        logActivity(req.user.id, 'REGISTER_MAIL', `Mendaftarkan Surat Masuk dari ${external_sender} untuk ${recipient}`, req);
+        if (typeof logActivity === 'function') {
+            logActivity(req.user.id, 'REGISTER_MAIL', `Mendaftarkan Surat Masuk dari ${external_sender}`, req);
+        }
+        
         res.status(200).json({ message: "Surat masuk berhasil diregistrasi!" });
     });
 });
@@ -1232,10 +1232,9 @@ app.get('/pimpinan/detail', verifyToken, (req, res) => {
             
             const letter = letterResult[0];
 
-            const sqlStaff = "SELECT * FROM users WHERE role IN ('staff', 'anggota', 'admin') ORDER BY full_name ASC";
+            const sqlStaff = "SELECT * FROM users WHERE role IN ('staff', 'anggota', 'admin') AND is_active = 1 ORDER BY full_name ASC";
 
             db.query(sqlStaff, (err3, staffResult) => {
-                
                 const sqlDispo = `
                     SELECT d.*, u.full_name as receiver_name 
                     FROM dispositions d
@@ -1270,12 +1269,13 @@ app.get('/pimpinan/history', verifyToken, (req, res) => {
             if (err) return res.redirect('/pimpinan/dashboard');
 
             let sql = `
-                SELECT l.*, t.name as type_name, 
+                SELECT l.id, l.letter_number, l.subject, l.created_at, l.origin_type, l.status, l.external_sender, l.pdf_path,
+                       t.name as type_name, 
                        u.full_name as pengirim, u.nrp,
-                       d.status as dispo_status, 
-                       d.receiver_id as staff_id, 
-                       s.full_name as staff_name,
-                       (LENGTH(l.content_data) > 0) as ada_file 
+                       MAX(d.status) as dispo_status, 
+                       MAX(d.receiver_id) as staff_id, 
+                       MAX(s.full_name) as staff_name,
+                       (LENGTH(l.content_data) > 0 OR l.pdf_path IS NOT NULL) as ada_file 
                 FROM letters l
                 LEFT JOIN letter_types t ON l.type_id = t.id
                 LEFT JOIN users u ON l.user_id = u.id
@@ -1295,6 +1295,8 @@ app.get('/pimpinan/history', verifyToken, (req, res) => {
             }
             if (status) { sql += " AND l.status = ?"; params.push(status); }
 
+            sql += " GROUP BY l.id";
+            
             sql += " ORDER BY l.created_at DESC";
 
             db.query(sql, params, (err, rows) => {
@@ -1315,6 +1317,9 @@ app.get('/pimpinan/history', verifyToken, (req, res) => {
         });
     });
 });
+
+
+
 
 app.get('/pimpinan/reports', verifyToken, (req, res) => {
     db.query('SELECT * FROM users WHERE id = ?', [req.user.id], (err, userResult) => {
@@ -1685,6 +1690,78 @@ app.post('/pimpinan/disposition', verifyToken, (req, res) => {
                 res.redirect(`/pimpinan/detail?id=${letter_id}&success=Disposisi berhasil dikirim`);
             });
         });
+    });
+});
+
+
+//download surat
+app.get('/download-surat/:id', verifyToken, (req, res) => {
+    const sql = `
+        SELECT l.*, t.template_path 
+        FROM letters l 
+        LEFT JOIN letter_types t ON l.type_id = t.id 
+        WHERE l.id = ?
+    `;
+
+    db.query(sql, [req.params.id], (err, results) => {
+        if (err || results.length === 0) return res.status(404).send("Surat tidak ditemukan");
+        
+        const surat = results[0];
+
+        if (surat.origin_type === 'EXTERNAL') {
+             if (!surat.content_data || surat.content_data.length === 0) {
+                 return res.status(404).send("File PDF kosong di database.");
+             }
+             
+             const pdfBuffer = Buffer.isBuffer(surat.content_data) 
+                ? surat.content_data 
+                : Buffer.from(surat.content_data);
+
+             res.setHeader("Content-Type", "application/pdf");
+             res.setHeader("Content-Disposition", "inline; filename=Surat_Masuk.pdf");
+             return res.send(pdfBuffer);
+        }
+
+        if (!surat.template_path) return res.status(500).send("Template belum diatur.");
+
+        const cleanFileName = surat.template_path.trim(); 
+        const filePath = path.join(process.cwd(), 'public', 'uploads', cleanFileName);
+
+        if (!fs.existsSync(filePath)) {
+            return res.status(500).send("File Template tidak ditemukan di server.");
+        }
+
+        try {
+            const content = fs.readFileSync(filePath, 'binary');
+            const zip = new PizZip(content);
+            const doc = new Docxtemplater(zip, { paragraphLoop: true, linebreaks: true });
+
+            let cleanData = {};
+            if (surat.content_data) {
+                try {
+                    let raw = surat.content_data.toString();
+                    if (raw.trim().startsWith('{')) {
+                        let parsed = JSON.parse(raw);
+                        Object.keys(parsed).forEach(k => {
+                            cleanData[k.replace(/[{}]/g, "").trim()] = parsed[k];
+                        });
+                    }
+                } catch(e) { cleanData = {}; }
+            }
+
+            cleanData.nomor_surat = surat.letter_number || 'DRAFT';
+            cleanData.tanggal_surat = new Date(surat.updated_at || surat.created_at).toLocaleDateString('id-ID', {day:'numeric', month:'long', year:'numeric'});
+
+            doc.render(cleanData);
+            const buf = doc.getZip().generate({ type: "nodebuffer", compression: "DEFLATE" });
+            
+            res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+            res.setHeader("Content-Disposition", `attachment; filename=${cleanFileName}`);
+            res.send(buf);
+
+        } catch (e) {
+            res.status(500).send("Gagal memproses dokumen: " + e.message);
+        }
     });
 });
 

@@ -4,11 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><%= title %></title>
-    
     <link rel="stylesheet" href="/css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body>
@@ -16,278 +14,221 @@
     <div class="dashboard-container">
         <%- include('../partials/sidebar') %>
 
-        <main class="main-content">
+        <main class="main-content-premium">
             <%- include('../partials/header') %>
 
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
-                <div>
-                    <h2 style="margin:0; font-size: 24px; color:#0f172a; font-weight: 700;">Kelola User</h2>
-                    <p style="color:#64748b; font-size:14px; margin-top:5px;">Manajemen akun akses untuk Admin, Staff, dan Pimpinan.</p>
-                </div>
-                <button onclick="openModalUser()" class="btn-primary" style="width: auto; padding: 12px 24px; margin-top: 0; box-shadow: 0 4px 6px rgba(0, 43, 232, 0.2);">
-                    <i class="fas fa-user-plus"></i> Tambah User Baru
+            <div class="premium-toolbar">
+                <button type="button" onclick="window.bukaModal()" class="btn-premium-add">
+                    <i class="fas fa-plus-circle"></i>
+                    <span>Tambah User Baru</span>
                 </button>
             </div>
 
-            <div class="premium-container">
-                <div class="list-header" style="grid-template-columns: 2fr 1.5fr 1.5fr 1fr 1fr 100px;">
+            <div class="user-list-container">
+                <div class="list-grid list-header-row">
                     <div>NAMA LENGKAP</div>
                     <div>USERNAME</div>
-                    <div>NRP</div>
-                    <div>ROLE</div>
-                    <div style="text-align:center;">STATUS</div>
-                    <div style="text-align:right;">AKSI</div>
+                    <div style="text-align: center;">ROLE</div>
+                    <div style="text-align: center;">STATUS</div>
+                    <div style="text-align: center;">AKSI</div>
                 </div>
 
-                <div class="list-body">
-                    <% if (users && users.length > 0) { %>
-                        <% users.forEach(u => { %>
-                            <% 
-                                let roleClass = 'role-staff';
-                                if(u.role === 'Admin') roleClass = 'role-admin';
-                                if(u.role === 'Pimpinan') roleClass = 'role-pimpinan';
-                            %>
-
-                            <div class="list-item" style="grid-template-columns: 2fr 1.5fr 1.5fr 1fr 1fr 100px;">
-                                <div style="font-weight: 600;"><%= u.full_name %></div>
-                                <div style="color:#64748b;"><%= u.username %></div>
-                                <div style="font-family: monospace; color:#002BE8;"><%= u.nrp || '-' %></div>
-                                <div>
-                                    <span class="badge-role <%= roleClass %>"><%= u.role %></span>
-                                </div>
-                                <div style="text-align:center;">
-                                    <% if(u.is_active) { %>
-                                        <span class="badge-status status-active"><i class="fas fa-check-circle"></i> Aktif</span>
-                                    <% } else { %>
-                                        <span class="badge-status status-inactive"><i class="fas fa-ban"></i> Mati</span>
-                                    <% } %>
-                                </div>
-                                <div class="action-group">
-                                    <% if (u.id !== user.id) { %>
-                                        <button onclick="openModalEdit('<%= u.id %>', '<%= u.full_name %>', '<%= u.username %>', '<%= u.nrp %>', '<%= u.role %>')" class="btn-icon btn-edit" title="Edit User">
-                                            <i class="fas fa-pen"></i>
-                                        </button>
-
-                                        <% if(u.is_active) { %>
-                                            <button onclick="toggleStatus(<%= u.id %>, false)" class="btn-icon btn-power-off" title="Nonaktifkan">
-                                                <i class="fas fa-power-off"></i>
-                                            </button>
-                                        <% } else { %>
-                                            <button onclick="toggleStatus(<%= u.id %>, true)" class="btn-icon btn-power-on" title="Aktifkan">
-                                                <i class="fas fa-play"></i>
-                                            </button>
-                                        <% } %>
-                                    <% } else { %>
-                                        <span style="font-size:11px; color:#94a3b8; font-style:italic;">(Anda)</span>
-                                    <% } %>
-                                </div>
+                <% if (users && users.length > 0) { %>
+                    <% users.forEach(u => { %>
+                        <div class="list-grid list-row">
+                            <div class="user-name-text"><%= u.full_name %></div>
+                            <div class="user-detail-text"><%= u.username %></div>
+                            
+                            <div style="text-align: center;">
+                                <span class="badge-pill role-<%= u.role.toLowerCase() %>"><%= u.role %></span>
                             </div>
-                        <% }) %>
-                    <% } else { %>
-                        <div style="padding:50px; text-align:center; color:#94a3b8;">
-                            <i class="fas fa-users-slash" style="font-size:40px; margin-bottom:15px; opacity:0.3;"></i><br>
-                            Belum ada user terdaftar.
+                            
+                            <div style="text-align: center;">
+                                <span class="badge-pill <%= u.is_active === 1 ? 'status-active' : 'status-inactive' %>">
+                                    <%= u.is_active === 1 ? 'Aktif' : 'Nonaktif' %>
+                                </span>
+                            </div>
+                            
+                            <div class="action-buttons-container">
+                                <% if (u.id !== user.id) { %>
+                                    <button type="button" class="btn-action-icon btn-edit-action" 
+                                            onclick="window.editUser('<%= u.id %>', '<%= u.full_name %>', '<%= u.username %>', '<%= u.nrp %>', '<%= u.role %>')" 
+                                            title="Edit">
+                                            <i class="fas fa-pen-to-square"></i>
+                                    </button>
+                                    
+                                    <button type="button" class="btn-action-icon btn-toggle-action <%= u.is_active === 1 ? 'on' : 'off' %>" 
+                                            onclick="window.toggleStatus('<%= u.id %>', <%= u.is_active %>, '<%= u.username %>')" 
+                                            title="Ubah Status">
+                                            <i class="fas fa-power-off"></i>
+                                    </button>
+                                <% } else { %>
+                                    <span style="font-size:11px; color:#94a3b8; font-style:italic;">(Anda)</span>
+                                <% } %>
+                            </div>
                         </div>
-                    <% } %>
-                </div>
+                    <% }) %>
+                <% } else { %>
+                    <div style="padding:40px; text-align:center; color:#64748b;">Belum ada data user.</div>
+                <% } %>
             </div>
-            
-            <div style="height: 50px;"></div>
         </main>
     </div>
 
-    <div id="modalUser" class="modal-overlay">
-        <div class="modal-box">
-            <i class="fas fa-times close-btn" onclick="document.getElementById('modalUser').style.display='none'"></i>
-            <h3 class="modal-title">Tambah User Baru</h3>
+    <div id="modalKhusus" class="modal-user-khusus">
+        <div class="modal-box-khusus">
+            <button type="button" class="close-modal-btn" onclick="window.tutupModal()"><i class="fas fa-times"></i></button>
             
-            <form id="formAddUser">
-                <div class="form-group">
-                    <label class="form-label">Nama Lengkap</label>
-                    <input type="text" name="full_name" class="form-input" placeholder="Contoh: Bripda Andi" required>
+            <h3 id="modalTitle" style="margin:0 0 25px 0; font-size:22px; font-weight:800; color:#1e293b;">
+                Form User
+            </h3>
+            
+            <form id="userForm">
+                <input type="hidden" id="userId">
+                
+                <div>
+                    <label class="form-label-premium">Nama Lengkap</label>
+                    <input type="text" id="nama" class="form-input-premium" required>
+                </div>
+
+                <div>
+                    <label class="form-label-premium">Username</label>
+                    <input type="text" id="username" class="form-input-premium" required autocomplete="off">
                 </div>
                 
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
-                    <div class="form-group">
-                        <label class="form-label">Username</label>
-                        <input type="text" name="username" class="form-input" required>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">NRP (Opsional)</label>
-                        <input type="text" name="nrp" class="form-input">
-                    </div>
+                <div>
+                    <label class="form-label-premium">NRP</label>
+                    <input type="text" id="nrp" class="form-input-premium" required>
                 </div>
 
-                <div class="form-group">
-                    <label class="form-label">Password Default</label>
-                    <input type="password" name="password" class="form-input" placeholder="Minimal 6 karakter" required>
+                <div>
+                    <label class="form-label-premium">Password</label>
+                    <input type="password" id="password" class="form-input-premium" placeholder="••••••••" autocomplete="new-password">
+                    <p id="passHint" style="font-size:11px; color:#64748b; margin:-12px 0 15px 0; display:none;">
+                        *Kosongkan jika tidak ganti password
+                    </p>
                 </div>
 
-                <div class="form-group">
-                    <label class="form-label">Role Akses</label>
-                    <select name="role" class="form-input">
-                        <option value="Staff">Staff / Operator</option>
-                        <option value="Pimpinan">Pimpinan</option>
-                        <option value="Admin">Administrator</option>
+                <div>
+                    <label class="form-label-premium">Role</label>
+                    <select id="role" class="form-input-premium">
+                        <option value="staff">Staff / Operator</option>
+                        <option value="pimpinan">Pimpinan</option>
+                        <option value="admin">Administrator</option>
                     </select>
                 </div>
 
-                <button type="submit" class="btn-primary">SIMPAN USER</button>
-            </form>
-        </div>
-    </div>
-
-    <div id="modalEdit" class="modal-overlay">
-        <div class="modal-box">
-            <i class="fas fa-times close-btn" onclick="document.getElementById('modalEdit').style.display='none'"></i>
-            <h3 class="modal-title">Edit Data User</h3>
-            
-            <form id="formEditUser">
-                <input type="hidden" id="editId">
-                
-                <div class="form-group">
-                    <label class="form-label">Nama Lengkap</label>
-                    <input type="text" id="editName" class="form-input" required>
-                </div>
-
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
-                    <div class="form-group">
-                        <label class="form-label">Username</label>
-                        <input type="text" id="editUser" class="form-input" required>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">NRP</label>
-                        <input type="text" id="editNrp" class="form-input">
-                    </div>
-                </div>
-
-                <div class="form-group" style="background:#fff7ed; padding:15px; border-radius:8px; border:1px dashed #fdba74;">
-                    <label class="form-label" style="color:#c2410c;">Ganti Password (Opsional)</label>
-                    <input type="password" id="editPass" class="form-input" placeholder="Biarkan kosong jika tidak diganti" style="background:white;">
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">Role Akses</label>
-                    <select id="editRole" class="form-input">
-                        <option value="Staff">Staff / Operator</option>
-                        <option value="Pimpinan">Pimpinan</option>
-                        <option value="Admin">Administrator</option>
-                    </select>
-                </div>
-
-                <button type="submit" class="btn-primary btn-warning">UPDATE DATA</button>
+                <button type="submit" class="btn-premium-save">SIMPAN DATA</button>
             </form>
         </div>
     </div>
 
     <script>
-        // --- LOGOUT (SWEETALERT CENTER) ---
-        function logout() { 
-            Swal.fire({
-                title: 'Konfirmasi Logout',
-                text: "Anda akan mengakhiri sesi ini.",
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonText: 'Ya, Logout',
-                confirmButtonColor: '#ef4444',
-                cancelButtonText: 'Batal'
-            }).then((res) => { if(res.isConfirmed) location.href = '/logout'; });
-        }
+        const modal = document.getElementById('modalKhusus');
+        const form = document.getElementById('userForm');
+        const passHint = document.getElementById('passHint');
+        const passInput = document.getElementById('password');
 
-        // --- TAMBAH USER ---
-        function openModalUser() { document.getElementById('modalUser').style.display = 'flex'; }
-        
-        document.getElementById('formAddUser').addEventListener('submit', async function(e) {
+        window.bukaModal = function() {
+            form.reset();
+            document.getElementById('userId').value = '';
+            document.getElementById('modalTitle').innerText = "Tambah User Baru";
+            passInput.required = true;
+            passInput.placeholder = "Masukkan password...";
+            passHint.style.display = 'none';
+            modal.classList.add('active');
+        };
+
+        window.editUser = function(id, nama, user, nrp, role) {
+            document.getElementById('userId').value = id;
+            document.getElementById('nama').value = nama;
+            document.getElementById('username').value = user;
+            document.getElementById('nrp').value = nrp;
+            document.getElementById('role').value = role;
+            
+            document.getElementById('modalTitle').innerText = "Edit Data User";
+            passInput.required = false;
+            passInput.placeholder = "Kosongkan jika tidak ganti";
+            passHint.style.display = 'block';
+            
+            modal.classList.add('active');
+        };
+
+        window.tutupModal = function() { modal.classList.remove('active'); };
+        window.onclick = function(e) { if (e.target === modal) window.tutupModal(); };
+
+        form.onsubmit = async function(e) {
             e.preventDefault();
-            
-            // Konversi Form Data ke JSON
-            const formData = new FormData(this);
-            // Perlu dikonversi karena di app.js kita pakai req.body (JSON)
-            // Atau pastikan di backend pakai upload.none()
-            
-            Swal.fire({ title: 'Menyimpan...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-
-            try {
-                const res = await fetch('/api/users', {
-                    method: 'POST',
-                    body: formData // Backend harus support multer upload.none()
-                });
-                
-                const result = await res.json();
-
-                if(res.ok) { 
-                    Swal.fire('Berhasil!', 'User baru berhasil ditambahkan.', 'success').then(() => location.reload()); 
-                } else { 
-                    Swal.fire('Gagal', result.message || 'Terjadi kesalahan.', 'error'); 
-                }
-            } catch(e) { Swal.fire('Error', 'Koneksi gagal.', 'error'); }
-        });
-
-        // --- EDIT USER ---
-        function openModalEdit(id, name, user, nrp, role) {
-            document.getElementById('editId').value = id;
-            document.getElementById('editName').value = name;
-            document.getElementById('editUser').value = user;
-            document.getElementById('editNrp').value = (nrp === 'null' || nrp === null) ? '' : nrp;
-            document.getElementById('editRole').value = role;
-            document.getElementById('editPass').value = ''; 
-            document.getElementById('modalEdit').style.display = 'flex';
-        }
-
-        document.getElementById('formEditUser').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            const id = document.getElementById('editId').value;
-            
+            const id = document.getElementById('userId').value;
             const data = {
-                full_name: document.getElementById('editName').value,
-                username: document.getElementById('editUser').value,
-                nrp: document.getElementById('editNrp').value,
-                role: document.getElementById('editRole').value,
-                password: document.getElementById('editPass').value
+                full_name: document.getElementById('nama').value,
+                username: document.getElementById('username').value,
+                nrp: document.getElementById('nrp').value,
+                password: document.getElementById('password').value,
+                role: document.getElementById('role').value
             };
 
-            Swal.fire({ title: 'Updating...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+            const url = id ? `/api/users/${id}` : '/api/users';
+            const method = id ? 'PUT' : 'POST';
 
+            Swal.fire({title: 'Menyimpan...', didOpen: () => Swal.showLoading()});
+            
             try {
-                const res = await fetch(`/api/users/${id}`, {
-                    method: 'PUT',
-                    headers: {'Content-Type': 'application/json'},
+                const res = await fetch(url, {
+                    method: method, headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify(data)
                 });
                 
-                if(res.ok) { 
-                    Swal.fire('Update Berhasil!', 'Data user telah diperbarui.', 'success').then(() => location.reload()); 
-                } else { 
-                    Swal.fire('Gagal', 'Gagal update data.', 'error'); 
+                if(res.ok) {
+                    Swal.fire({ icon: 'success', title: 'Berhasil!', text: 'Data telah disimpan.', timer: 1500, showConfirmButton: false })
+                    .then(() => location.reload());
+                } else {
+                    const err = await res.json();
+                    Swal.fire('Gagal', err.message, 'error');
                 }
-            } catch(e) { Swal.fire('Error', 'Koneksi gagal.', 'error'); }
-        });
+            } catch(error) { Swal.fire('Error', 'Koneksi gagal', 'error'); }
+        };
 
-        // --- TOGGLE STATUS (AKTIF/NONAKTIF) ---
-        function toggleStatus(id, willActivate) {
-            const action = willActivate ? "Mengaktifkan" : "Menonaktifkan";
-            const confirmColor = willActivate ? "#10b981" : "#ef4444";
+        window.toggleStatus = function(id, isActive, username) {
+            const action = (isActive === 1) ? 'Menonaktifkan' : 'Mengaktifkan';
+            const willActivate = (isActive === 0);
 
             Swal.fire({
-                title: `${action} User?`,
-                text: "Status user akan diubah.",
-                icon: 'warning',
+                title: willActivate ? 'Aktifkan?' : 'Nonaktifkan?',
+                text: `Ubah status akses untuk ${username}`,
+                icon: 'question',
                 showCancelButton: true,
-                confirmButtonText: `Ya, ${action}`,
-                confirmButtonColor: confirmColor,
-                cancelButtonText: 'Batal'
+                confirmButtonColor: willActivate ? '#10b981' : '#ef4444',
+                confirmButtonText: 'Ya'
             }).then(async (result) => {
-                if (result.isConfirmed) {
-                    Swal.fire({ title: 'Memproses...', didOpen: () => Swal.showLoading() });
+                if(result.isConfirmed) {
                     try {
-                        const res = await fetch(`/api/users/${id}/toggle-status`, { method: 'PUT' });
+                        const res = await fetch(`/api/users/${id}/status`, { method: 'PUT' });
                         if(res.ok) {
-                            Swal.fire('Berhasil', 'Status user diperbarui.', 'success').then(() => location.reload());
+                            location.reload();
                         } else {
-                            Swal.fire('Gagal', 'Terjadi kesalahan.', 'error');
+                            const data = await res.json();
+                            Swal.fire('Gagal', data.message, 'error');
                         }
-                    } catch(e) { Swal.fire('Error', 'Koneksi error.', 'error'); }
+                    } catch(e) {
+                        Swal.fire('Error', 'Gagal koneksi server', 'error');
+                    }
                 }
+            });
+        };
+        
+        function logout() { 
+            Swal.fire({
+                title: 'Logout', 
+                text: "Apakah Anda yakin ingin mengakhiri sesi ini?", 
+                icon: 'question',
+                showCancelButton: true, 
+                cancelButtonText: 'Batal',
+                confirmButtonText: 'Ya', 
+                confirmButtonColor: '#ef4444',
+                reverseButtons: false
+            }).then((res) => { 
+                if (res.isConfirmed) window.location.href = '/logout'; 
             });
         }
     </script>
