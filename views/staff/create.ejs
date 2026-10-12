@@ -95,11 +95,14 @@
         </main>
     </div>
 
+    <% // JSON must be encoded for HTML script context, not only JavaScript syntax.
+       const scriptJson = value => JSON.stringify(value).replace(/[<>&\u2028\u2029]/g,
+           char => '\\u' + char.charCodeAt(0).toString(16).padStart(4, '0')); %>
     <script>
         // 1. DATA DARI SERVER
-        const allTypes = <%- JSON.stringify(types || []) %>;
+        const allTypes = <%- scriptJson(types || []) %>;
         const isEditMode = <%= isEdit %>;
-        const oldContent = <%- (isEdit && content) ? JSON.stringify(content) : 'null' %>;
+        const oldContent = <%- scriptJson((isEdit && content) ? content : null) %>;
 
         // 2. RENDER FORM DINAMIS
         function loadFormSchema() {
@@ -127,40 +130,43 @@
                 schema = Array.isArray(raw) ? raw : [];
             } catch (e) { schema = []; }
 
-            let html = '<h4 style="margin-bottom:15px; font-size:16px; color:#2d3748; border-bottom:1px solid #eee; padding-bottom:10px;">3. Isi Detail Surat</h4>';
+            container.textContent = '';
+            const heading = document.createElement('h4');
+            heading.style.cssText = 'margin-bottom:15px; font-size:16px; color:#2d3748; border-bottom:1px solid #eee; padding-bottom:10px;';
+            heading.textContent = '3. Isi Detail Surat';
+            container.appendChild(heading);
             
             if (!schema || schema.length === 0) {
-                html += '<p style="color:#e53e3e;">⚠️ Admin belum mengatur formulir untuk jenis surat ini.</p>';
+                const empty = document.createElement('p');
+                empty.style.color = '#e53e3e';
+                empty.textContent = '⚠️ Admin belum mengatur formulir untuk jenis surat ini.';
+                container.appendChild(empty);
             } else {
-                html += '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">';
+                const grid = document.createElement('div');
+                grid.style.cssText = 'display: grid; grid-template-columns: 1fr 1fr; gap: 20px;';
                 
                 schema.forEach(field => {
-                    let inputHtml = '';
                     let value = '';
                     if (isEditMode && oldContent && oldContent[field.key]) {
                         value = oldContent[field.key];
                     }
 
-                    if (field.type === 'textarea') {
-                        inputHtml = `<textarea name="${field.key}" class="form-control-modern" rows="3">${value}</textarea>`;
-                    } else if (field.type === 'date') {
-                        inputHtml = `<input type="date" name="${field.key}" class="form-control-modern" value="${value}">`;
-                    } else {
-                        inputHtml = `<input type="text" name="${field.key}" class="form-control-modern" value="${value}">`;
-                    }
-
-                    const gridSpan = field.type === 'textarea' ? 'grid-column: span 2;' : '';
-
-                    html += `
-                        <div style="${gridSpan}">
-                            <label style="display:block; font-size:13px; font-weight:600; color:#4a5568; margin-bottom:5px;">${field.label}</label>
-                            ${inputHtml}
-                        </div>
-                    `;
+                    const wrapper = document.createElement('div');
+                    if (field.type === 'textarea') wrapper.style.gridColumn = 'span 2';
+                    const label = document.createElement('label');
+                    label.style.cssText = 'display:block; font-size:13px; font-weight:600; color:#4a5568; margin-bottom:5px;';
+                    label.textContent = field.label;
+                    const input = document.createElement(field.type === 'textarea' ? 'textarea' : 'input');
+                    if (field.type === 'textarea') input.rows = 3;
+                    else input.type = field.type === 'date' ? 'date' : 'text';
+                    input.name = field.key;
+                    input.className = 'form-control-modern';
+                    input.value = value;
+                    wrapper.append(label, input);
+                    grid.appendChild(wrapper);
                 });
-                html += '</div>';
+                container.appendChild(grid);
             }
-            container.innerHTML = html;
         }
 
         if (isEditMode) {

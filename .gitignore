@@ -1,0 +1,16 @@
+node_modules/
+.env
+public/uploads/*
+!public/uploads/.gitkeep
+
+node_modules/
+.env
+
+public/uploads/*
+!public/uploads/.gitkeep
+
+uploads/*
+!uploads/.gitkeep
+
+.agents/
+skills-lock.json

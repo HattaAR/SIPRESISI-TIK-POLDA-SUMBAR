@@ -7,7 +7,7 @@ const authMiddleware = require('../middleware/authMiddleware');
 const multer = require('multer');
 const path = require('path');
 
-// Atur lokasi penyimpanan & nama file
+
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
         cb(null, 'public/uploads/'); // Simpan ke folder public/uploads
@@ -42,7 +42,7 @@ router.use(authMiddleware);
 
 // --- 2. ROUTES ---
 
-// Create (POST) - Sudah benar
+// Create (POST) 
 router.post('/', upload.single('lampiran'), letterController.createDraft);              
 
 router.get('/my', letterController.getMyLetters);            
@@ -52,8 +52,7 @@ router.get('/archive', letterController.getArchivedLetters);
 
 router.get('/:id', letterController.getLetterDetail);        
 
-// Update (PUT) - INI YANG KITA PERBAIKI
-// Menambahkan middleware upload agar bisa membaca req.body dari FormData
+
 router.put('/:id', upload.single('lampiran'), letterController.updateLetter);          
 
 router.delete('/:id', letterController.deleteLetter);        
@@ -62,8 +61,7 @@ router.post('/:id/submit', letterController.submitLetter);
 router.post('/:id/approve', letterController.approveLetter); 
 router.post('/:id/reject', letterController.rejectLetter);   
 
-// Endpoint Download (Untuk tombol Unduh di Dashboard)
-// Pastikan controller Anda punya fungsi downloadLetter
+
 router.get('/:id/download', letterController.downloadLetter); 
 
 module.exports = router;

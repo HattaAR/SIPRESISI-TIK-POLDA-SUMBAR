@@ -24,6 +24,11 @@
     }
 %>
 
+<% if (typeof csrfToken === 'string') { %>
+<meta name="csrf-token" content="<%= csrfToken %>">
+<script src="/js/csrf.js"></script>
+<% } %>
+
 <style>
     /* Default: Tombol Sembunyi di Laptop/PC */
     .btn-mobile-menu {

@@ -1,19 +1,25 @@
 const express = require('express');
 const router = express.Router();
 const typeController = require('../controllers/typeController');
-const authMiddleware = require('../middleware/authMiddleware');
-const upload = require('../middleware/upload'); // Import middleware upload
+const { verifyToken } = require('../middleware/authMiddleware');
+const { requireRole } = require('../middleware/roleMiddleware');
 
-router.use(authMiddleware);
-
-router.get('/', typeController.getAllTypes);
-
-// Tambahkan 'upload.single('template')' untuk menangani upload file
-router.post('/', upload.single('template'), typeController.createType);
-
-router.delete('/:id', typeController.deleteType);
-
-// Route baru untuk update schema
-router.put('/:id/schema', typeController.updateSchema);
+router.get('/', verifyToken, requireRole('admin'), typeController.getTypesPage);
 
 module.exports = router;
+
+module.exports.registerCreateType = (app, upload) => {
+    app.post('/api/types', verifyToken, requireRole('admin'), upload.single('template_file'), typeController.createTypeWithTemplate);
+};
+
+module.exports.registerUpdateSchema = (app) => {
+    app.put('/api/types/:id/schema', verifyToken, requireRole('admin'), typeController.updateSchemaActive);
+};
+
+module.exports.registerDeleteType = (app) => {
+    app.delete('/api/types/:id', verifyToken, requireRole('admin'), typeController.deleteTypeActive);
+};
+
+module.exports.registerUpdateType = (app, upload) => {
+    app.put('/api/types/:id', verifyToken, requireRole('admin'), upload.single('template_file'), typeController.updateTypeWithTemplate);
+};

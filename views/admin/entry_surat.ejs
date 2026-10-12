@@ -75,7 +75,7 @@
                         </div>
 
                         <div style="grid-column: 1 / -1;" class="grid-span-mobile">
-                            <label class="form-label" style="font-size: 14px; margin-bottom: 12px;">Upload File Scan (PDF/Gambar)</label>
+                            <label class="form-label" style="font-size: 14px; margin-bottom: 12px;">Upload File Scan (PDF/Word)</label>
                             
                             <div class="file-upload-wrapper" onclick="document.getElementById('fileInput').click()" style="cursor:pointer; border: 2px dashed #cbd5e1; padding: 30px; border-radius: 12px; text-align: center; transition: all 0.3s;">
                                 <i class="fas fa-file-pdf" style="font-size: 48px; color: #94a3b8; margin-bottom: 15px;"></i>
@@ -85,10 +85,10 @@
                                 </div>
                                 
                                 <div style="font-size: 13px; color: #94a3b8; margin-top: 5px; background: #e2e8f0; padding: 4px 12px; border-radius: 20px; display: inline-block;">
-                                    <i class="fas fa-info-circle"></i> Maksimal 50 MB (PDF/JPG/PNG)
+                                    <i class="fas fa-info-circle"></i> Maksimal 50 MB (PDF/DOC/DOCX)
                                 </div>
 
-                                <input type="file" name="file_scan" id="fileInput" accept=".pdf, .jpg, .jpeg, .png" required onchange="tampilkanPreview(this)" style="display:none;">
+                                <input type="file" name="file_scan" id="fileInput" accept=".pdf,.doc,.docx" required onchange="tampilkanPreview(this)" style="display:none;">
                             </div>
 
                             <div id="boxPreview" style="display:none; margin-top:15px; background:#f8fafc; border:2px dashed #cbd5e1; border-radius:8px; padding:15px;">
@@ -213,7 +213,7 @@
                         title: 'Berhasil!',
                         text: result.message,
                         confirmButtonText: 'Selesai'
-                    }).then(() => { window.location.href = '/admin/surat-masuk'; }); // Redirect ke list surat masuk
+                    }).then(() => { window.location.href = '/admin/archive'; }); 
                 } else {
                     Swal.fire('Gagal', result.message || "Terjadi kesalahan saat menyimpan.", 'error');
                 }

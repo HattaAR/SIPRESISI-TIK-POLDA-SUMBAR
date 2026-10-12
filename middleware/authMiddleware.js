@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
+const { jwtSecret, getTokenCookieOptions } = require('../config/auth');
 
-module.exports = (req, res, next) => {
+const authMiddleware = (req, res, next) => {
     // 1. Ambil token dari Header (Format: "Bearer <token>")
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1]; 
@@ -21,3 +22,20 @@ module.exports = (req, res, next) => {
         next(); 
     });
 };
+
+const verifyToken = (req, res, next) => {
+    const token = req.cookies.token;
+    if (!token) return res.redirect('/');
+
+    try {
+        const decoded = jwt.verify(token, jwtSecret);
+        req.user = decoded;
+        next();
+    } catch (err) {
+        res.clearCookie('token', getTokenCookieOptions(req));
+        return res.redirect('/');
+    }
+};
+
+module.exports = authMiddleware;
+module.exports.verifyToken = verifyToken;

@@ -135,7 +135,7 @@
 
                                     <% } else if (st === 'REJECTED') { %>
                                         <div style="display:flex; gap:5px; justify-content:flex-end;">
-                                            <button onclick="showNote(`<%= item.pimpinan_note %>`)" class="btn-mini mini-delete" title="Lihat Catatan" style="width:auto; padding:0 10px; gap:5px;">
+                                            <button data-note="<%= item.rejection_reason || 'Tidak ada catatan revisi.' %>" onclick="showNote(this)" class="btn-mini mini-delete" title="Lihat Catatan" style="width:auto; padding:0 10px; gap:5px;">
                                                 <i class="fas fa-comment-alt"></i> Note
                                             </button>
                                             <a href="/staff/create?edit=<%= item.id %>" class="btn-mini mini-edit" title="Perbaiki" style="width:auto; padding:0 10px; gap:5px;">
@@ -163,28 +163,20 @@
         </main>
     </div>
 
-    <div id="modalRevisi" class="modal-overlay">
-        <div class="modal-box">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-                <h3 style="margin:0; color:#dc2626;"><i class="fas fa-exclamation-circle"></i> Catatan Revisi</h3>
-                <span onclick="closeNote()" style="cursor:pointer; font-size:24px;">&times;</span>
-            </div>
-            <div style="background:#fef2f2; padding:15px; border-radius:8px; color:#991b1b; font-size:14px; line-height:1.6; border-left:4px solid #ef4444;">
-                <span id="noteContent">...</span>
-            </div>
-            <div style="text-align:right; margin-top:20px;">
-                <button onclick="closeNote()" style="background:#1e293b; color:white; border:none; padding:8px 16px; border-radius:6px; cursor:pointer;">Tutup</button>
-            </div>
-        </div>
-    </div>
-
     <script>
-        function showNote(note) {
-            document.getElementById('noteContent').innerText = (note && note !== 'null') ? note : "Tidak ada catatan.";
-            document.getElementById('modalRevisi').style.display = 'flex';
-        }
-        function closeNote() {
-            document.getElementById('modalRevisi').style.display = 'none';
+        // Fungsi showNote yang sudah diperbarui menggunakan SweetAlert2
+        function showNote(btnElement) {
+            const note = btnElement.getAttribute('data-note');
+            const noteText = (note && note !== 'null') ? note : "Tidak ada catatan revisi dari Pimpinan.";
+            
+            // Menampilkan pop-up yang elegan dan anti-freeze
+            Swal.fire({
+                title: 'Catatan Revisi',
+                text: noteText,
+                icon: 'info',
+                confirmButtonColor: '#3b82f6',
+                confirmButtonText: 'Tutup'
+            });
         }
 
         async function ajukanSurat(id) {

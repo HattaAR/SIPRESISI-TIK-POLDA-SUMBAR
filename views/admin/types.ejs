@@ -156,8 +156,11 @@
         </div>
     </div>
 
+    <% // JSON must be encoded for HTML script context, not only JavaScript syntax.
+       const scriptJson = value => JSON.stringify(value).replace(/[<>&\u2028\u2029]/g,
+           char => '\\u' + char.charCodeAt(0).toString(16).padStart(4, '0')); %>
     <script>
-        const allData = <%- JSON.stringify(types || []) %>;
+        const allData = <%- scriptJson(types || []) %>;
         let currentSchema = [];
         let isEditMode = false;
 
@@ -228,7 +231,9 @@
         function updateFileName(input) {
             const display = document.getElementById('fileNameDisplay');
             if (input.files && input.files[0]) {
-                display.innerHTML = '<i class="fas fa-file-word"></i> ' + input.files[0].name;
+                const icon = document.createElement('i');
+                icon.className = 'fas fa-file-word';
+                display.replaceChildren(icon, document.createTextNode(' ' + input.files[0].name));
             }
         }
 
@@ -258,23 +263,52 @@
 
         function renderSchemaList() {
             const container = document.getElementById('schemaContainer');
-            container.innerHTML = currentSchema.length === 0 ? '<div style="text-align:center; padding:30px; color:#94a3b8;">Belum ada input.</div>' : '';
+            container.textContent = '';
+            if (currentSchema.length === 0) {
+                const empty = document.createElement('div');
+                empty.style.cssText = 'text-align:center; padding:30px; color:#94a3b8;';
+                empty.textContent = 'Belum ada input.';
+                container.appendChild(empty);
+            }
             currentSchema.forEach((item, index) => {
                 const div = document.createElement('div');
                 div.style.display = 'grid';
                 div.style.gridTemplateColumns = '2fr 1.5fr 1.5fr 40px';
                 div.style.gap = '10px';
                 div.style.marginBottom = '10px';
-                div.innerHTML = `
-                    <input type="text" value="${item.label}" oninput="updateSchema(${index}, 'label', this.value)" class="modern-input" placeholder="Label">
-                    <select onchange="updateSchema(${index}, 'type', this.value)" class="modern-input">
-                        <option value="text" ${item.type==='text'?'selected':''}>Teks</option>
-                        <option value="textarea" ${item.type==='textarea'?'selected':''}>Paragraf</option>
-                        <option value="date" ${item.type==='date'?'selected':''}>Tanggal</option>
-                    </select>
-                    <input type="text" value="${item.key}" oninput="updateSchemaKey(${index}, this.value)" class="modern-input" placeholder="Variable ID">
-                    <button onclick="hapusSchema(${index})" class="btn-icon btn-delete" style="width:100%;"><i class="fas fa-times"></i></button>
-                `;
+                const label = document.createElement('input');
+                label.type = 'text';
+                label.value = item.label;
+                label.className = 'modern-input';
+                label.placeholder = 'Label';
+                label.addEventListener('input', () => updateSchema(index, 'label', label.value));
+
+                const type = document.createElement('select');
+                type.className = 'modern-input';
+                [['text', 'Teks'], ['textarea', 'Paragraf'], ['date', 'Tanggal']].forEach(([value, text]) => {
+                    const option = document.createElement('option');
+                    option.value = value;
+                    option.textContent = text;
+                    option.selected = item.type === value;
+                    type.appendChild(option);
+                });
+                type.addEventListener('change', () => updateSchema(index, 'type', type.value));
+
+                const key = document.createElement('input');
+                key.type = 'text';
+                key.value = item.key;
+                key.className = 'modern-input';
+                key.placeholder = 'Variable ID';
+                key.addEventListener('input', () => updateSchemaKey(index, key.value));
+
+                const remove = document.createElement('button');
+                remove.className = 'btn-icon btn-delete';
+                remove.style.width = '100%';
+                remove.addEventListener('click', () => hapusSchema(index));
+                const icon = document.createElement('i');
+                icon.className = 'fas fa-times';
+                remove.appendChild(icon);
+                div.append(label, type, key, remove);
                 container.appendChild(div);
             });
         }

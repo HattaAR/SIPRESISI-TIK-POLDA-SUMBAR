@@ -112,7 +112,7 @@ exports.getPendingLetters = async (req, res) => {
     }
 };
 
-// 5. Pimpinan Menyetujui Surat (PERBAIKAN: TANPA PDF GENERATOR)
+// 5. Pimpinan Menyetujui Surat 
 exports.approveLetter = async (req, res) => {
     const { id } = req.params;
     const { notes } = req.body; 
@@ -162,8 +162,7 @@ exports.approveLetter = async (req, res) => {
             .replace('{bulan}', bulan)
             .replace('{tahun}', currentYear);
             
-        // PERBAIKAN: Hapus logika generateSuratPDF karena modul sudah dihapus
-        // Nilai pdf_path diisi null atau string kosong karena file tidak di-generate.
+        
         const namaFileFinal = null; 
 
         // Update Database
@@ -191,8 +190,7 @@ exports.approveLetter = async (req, res) => {
     }
 };
 
-// Fungsi lainnya (reject, archive, history, delete, detail, update) tetap sama...
-// Saya persingkat untuk efisiensi, pastikan tetap ada di file Anda.
+
 
 exports.rejectLetter = async (req, res) => {
     const { id } = req.params;

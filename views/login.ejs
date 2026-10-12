@@ -83,6 +83,9 @@
     </div>
 
     <script>
+        // Remove tokens left by the old login flow; authentication now stays in HttpOnly cookies.
+        try { localStorage.removeItem('token'); } catch (e) {}
+
         // 1. FUNGSI LOGIN
         document.getElementById('loginForm').addEventListener('submit', async function(e) {
             e.preventDefault();
@@ -108,8 +111,7 @@
                 const data = await response.json();
 
                 if (response.ok) {
-                    // Simpan ke LocalStorage
-                    localStorage.setItem('token', data.token);
+                    // Simpan data tampilan saja; token hanya berada dalam cookie HttpOnly.
                     localStorage.setItem('role', data.user.role);
                     localStorage.setItem('name', data.user.full_name);
 

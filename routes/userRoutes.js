@@ -1,14 +1,23 @@
 const express = require('express');
 const router = express.Router();
 const userController = require('../controllers/userController');
-const authMiddleware = require('../middleware/authMiddleware');
+const { verifyToken } = require('../middleware/authMiddleware');
+const { requireRole } = require('../middleware/roleMiddleware');
 
-// Kunci semua route ini hanya untuk ADMIN
-router.use(authMiddleware); 
-// (Tips: Di middleware nanti Anda bisa tambahkan cek if(req.user.role !== 'admin')...)
+router.get('/', verifyToken, requireRole('admin'), userController.getUsersPage);
 
-router.get('/', userController.getAllUsers);
-router.post('/', userController.createUser);
-router.delete('/:id', userController.deleteUser);
+router.registerGetUsersApi = (app) => {
+    app.get('/api/users', verifyToken, userController.getUsersApi);
+};
+
+router.registerUserApiMutations = (app) => {
+    app.post('/api/users', verifyToken, requireRole('admin'), userController.createUserApi);
+    app.put('/api/users/:id', verifyToken, requireRole('admin'), userController.updateUserApi);
+    app.put('/api/users/:id/status', verifyToken, requireRole('admin', 'kasubbag'), userController.updateUserStatusApi);
+};
+
+router.registerDeleteUserApi = (app) => {
+    app.delete('/api/users/:id', verifyToken, requireRole('admin'), userController.deleteUserApi);
+};
 
 module.exports = router;
